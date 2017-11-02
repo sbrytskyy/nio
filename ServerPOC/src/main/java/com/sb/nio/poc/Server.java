@@ -23,7 +23,7 @@ public class Server {
 	public void start() {
 		log.info("Server configured with port: {}", port);
 
-		ServerSocketAcceptor ssa = new ServerSocketAcceptor(port, inboundPortsQueue);
+		SocketAcceptor ssa = new SocketAcceptor(port, inboundPortsQueue);
 		Thread accepterThread = new Thread(ssa);
 		accepterThread.start();
 	}

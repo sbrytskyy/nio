@@ -9,15 +9,15 @@ import java.util.Queue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ServerSocketAcceptor implements Runnable {
+public class SocketAcceptor implements Runnable {
 
-	private static final Logger log = LoggerFactory.getLogger(ServerSocketAcceptor.class);
+	private static final Logger log = LoggerFactory.getLogger(SocketAcceptor.class);
 	private int port;
 	
 	private ServerSocketChannel serverSocketChannel;
 	private Queue<SocketContainer> queue;
 
-	public ServerSocketAcceptor(int port, Queue<SocketContainer> queue) {
+	public SocketAcceptor(int port, Queue<SocketContainer> queue) {
 		this.port = port;
 		this.queue = queue;
 	}
