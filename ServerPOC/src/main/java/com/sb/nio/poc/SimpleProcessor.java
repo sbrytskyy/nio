@@ -18,7 +18,7 @@ public class SimpleProcessor implements ProtocolProcessor {
 		while (readBuffer.hasRemaining()) {
 			sb.append((char) readBuffer.get()); // read 1 byte at a time
 		}
-		log.info("Incoming data: <<<\n{}>>>", sb.toString());
+		log.debug("Incoming data: <<<\n{}>>>", sb.toString());
 		
 		String httpResponse = "HTTP/1.1 200 OK\r\n" +
                 "Content-Length: 38\r\n" +
