@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration status="DEBUG">
+
+  <properties>
+    <property name="app_log_level">$${env:LOG_LEVEL:-debug}</property>
+  </properties>
+
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="log4j2-appenders.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="log4j2-loggers.xml"/>
+
+</configuration>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Appenders>
+  <Console name="Console" target="SYSTEM_OUT">
+    <PatternLayout
+        pattern="%C:%L|%d{yyyy/MM/dd HH:mm:ss.SSS}|%m%n"/>
+  </Console>
+
+  <Console name="ConsoleErr" target="SYSTEM_ERR">
+    <PatternLayout
+        pattern="%C:%L|%d{yyyy/MM/dd HH:mm:ss.SSS}|%m%n"/>
+  </Console>
+
+</Appenders>
