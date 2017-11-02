@@ -35,4 +35,15 @@ public class SocketContainer {
 
 		return totalBytesRead;
 	}
+
+	public int write(ByteBuffer byteBuffer) throws IOException {
+		int totalWritten = 0;
+		
+		while(byteBuffer.hasRemaining()) {
+			int written = channel.write(byteBuffer);
+			totalWritten += written;
+		}
+		
+		return totalWritten;
+	}
 }

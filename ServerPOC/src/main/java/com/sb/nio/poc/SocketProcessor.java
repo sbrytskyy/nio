@@ -5,6 +5,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Set;
 
@@ -16,18 +17,26 @@ public class SocketProcessor implements Runnable {
 	private static final Logger log = LoggerFactory.getLogger(SocketProcessor.class);
 
 	private Queue<SocketContainer> inboundPortsQueue;
+	
+	private Queue<Message> outboundMessageQueue;
 
 	private ByteBuffer readBuffer = ByteBuffer.allocate(2048);
+	private ByteBuffer writeBuffer = ByteBuffer.allocate(2048);
 
 	private Selector readSelector;
+	private Selector writeSelector;
 
 	private ProtocolProcessor protocolProcessor;
 
 	public SocketProcessor(Queue<SocketContainer> inboundPortsQueue, ProtocolProcessor protocolProcessor) throws IOException {
 		this.inboundPortsQueue = inboundPortsQueue;
 		this.protocolProcessor = protocolProcessor;
+		
+		outboundMessageQueue = new LinkedList<>();
+		protocolProcessor.setMessageQueue(outboundMessageQueue);
 
 		readSelector = Selector.open();
+		writeSelector = Selector.open();
 	}
 
 	@Override
@@ -71,10 +80,7 @@ public class SocketProcessor implements Runnable {
 				SelectionKey key = it.next();
 
 				readFromSocket(key);
-
-				it.remove();
 			}
-			keys.clear();
 		}
 	}
 
@@ -98,7 +104,7 @@ public class SocketProcessor implements Runnable {
 		readBuffer.flip();
 
 		if (bytesRead > 0) {
-			protocolProcessor.processData(readBuffer);
+			protocolProcessor.processData(readBuffer, sc);
 		}
 
 		if (readBuffer.remaining() == 0) {
@@ -109,5 +115,36 @@ public class SocketProcessor implements Runnable {
 	}
 
 	private void writeToSockets() throws IOException {
+		
+		while (!outboundMessageQueue.isEmpty()) {
+			Message message = outboundMessageQueue.poll();
+			SelectionKey key = message.getSc().getChannel().register(writeSelector, SelectionKey.OP_WRITE);
+			key.attach(message);
+		}
+		
+		int selectNow = writeSelector.selectNow();
+		if (selectNow > 0) {
+			Set<SelectionKey> keys = writeSelector.selectedKeys();
+			
+			Iterator<SelectionKey> iterator = keys.iterator();
+			
+			while(iterator.hasNext()) {
+				SelectionKey key = iterator.next();
+				
+				Message message = (Message) key.attachment();
+
+				writeBuffer.clear();
+				writeBuffer.put(message.getBody());
+				writeBuffer.flip();
+				
+				int written = message.getSc().write(writeBuffer);
+				log.debug("Outbound message to {}, written {} bytes.", message.getSc().getChannel(), written);
+				writeBuffer.clear();
+
+				key.attach(null);
+				key.cancel();
+				key.channel().close();
+			}
+		}
 	}
 }
