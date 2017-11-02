@@ -12,26 +12,19 @@ import org.slf4j.LoggerFactory;
 public class SocketAcceptor implements Runnable {
 
 	private static final Logger log = LoggerFactory.getLogger(SocketAcceptor.class);
-	private int port;
 	
 	private ServerSocketChannel serverSocketChannel;
 	private Queue<SocketContainer> queue;
 
-	public SocketAcceptor(int port, Queue<SocketContainer> queue) {
-		this.port = port;
+	public SocketAcceptor(int port, Queue<SocketContainer> queue) throws IOException {
 		this.queue = queue;
+		
+		serverSocketChannel = ServerSocketChannel.open();
+		serverSocketChannel.bind(new InetSocketAddress(port));
 	}
 
 	@Override
 	public void run() {
-		try  {
-			serverSocketChannel = ServerSocketChannel.open();
-			serverSocketChannel.bind(new InetSocketAddress(port));
-		} catch (IOException e) {
-			log.error(e.getMessage(), e);
-			return;
-		}
-		
 		while (true) {
 			try {
 				SocketChannel channel = serverSocketChannel.accept();
