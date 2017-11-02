@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
@@ -18,10 +17,15 @@ public class SocketProcessor implements Runnable {
 
 	private Queue<SocketContainer> inboundPortsQueue;
 
+	private ByteBuffer readBuffer = ByteBuffer.allocate(2048);
+
 	private Selector readSelector;
 
-	public SocketProcessor(Queue<SocketContainer> inboundPortsQueue) throws IOException {
+	private ProtocolProcessor protocolProcessor;
+
+	public SocketProcessor(Queue<SocketContainer> inboundPortsQueue, ProtocolProcessor protocolProcessor) throws IOException {
 		this.inboundPortsQueue = inboundPortsQueue;
+		this.protocolProcessor = protocolProcessor;
 
 		readSelector = Selector.open();
 	}
@@ -77,36 +81,31 @@ public class SocketProcessor implements Runnable {
 	private void readFromSocket(SelectionKey key) throws IOException {
 		SocketContainer sc = (SocketContainer) key.attachment();
 
-		ByteBuffer byteBuffer = ByteBuffer.allocate(2048);
-
-		read(sc, byteBuffer);
+		readData(sc);
 
 		if (sc.isEndOfStreamReached()) {
 			log.debug("Socket has been closed: {}", sc.getChannel());
-			
+
 			key.attach(null);
 			key.cancel();
 			key.channel().close();
 		}
 	}
 
-	private void read(SocketContainer sc, ByteBuffer byteBuffer) throws IOException {
-		int bytesRead = sc.read(byteBuffer);
-		byteBuffer.flip();
+	private void readData(SocketContainer sc) throws IOException {
+
+		int bytesRead = sc.read(readBuffer);
+		readBuffer.flip();
 
 		if (bytesRead > 0) {
-			StringBuilder sb = new StringBuilder();
-			while (byteBuffer.hasRemaining()) {
-				sb.append((char) byteBuffer.get()); // read 1 byte at a time
-			}
-			log.info("Incoming data: <<<\n{}>>>", sb.toString());
+			protocolProcessor.processData(readBuffer);
 		}
 
-		if (byteBuffer.remaining() == 0) {
-			byteBuffer.clear();
+		if (readBuffer.remaining() == 0) {
+			readBuffer.clear();
 			return;
 		}
-		byteBuffer.clear();
+		readBuffer.clear();
 	}
 
 	private void writeToSockets() throws IOException {

@@ -15,6 +15,7 @@ public class Server {
 
 	private int port;
 	private Queue<SocketContainer> inboundPortsQueue;
+	private ProtocolProcessor protocolProcessor;
 
 	public Server(int port) {
 		this.port = port;
@@ -28,7 +29,9 @@ public class Server {
 		Thread accepterThread = new Thread(ssa);
 		accepterThread.start();
 		
-		SocketProcessor sp = new SocketProcessor(inboundPortsQueue);
+		protocolProcessor = new SimpleProcessor();
+		
+		SocketProcessor sp = new SocketProcessor(inboundPortsQueue, protocolProcessor);
 		Thread processorThread = new Thread(sp);
 		processorThread.start();
 	}
