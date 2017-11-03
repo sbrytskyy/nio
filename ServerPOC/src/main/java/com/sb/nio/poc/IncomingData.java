@@ -1,12 +1,14 @@
 package com.sb.nio.poc;
 
+import java.nio.ByteBuffer;
+
 public class IncomingData {
 
 	private SocketContainer sc;
-	private byte[] bytesArray;
+	private ByteBuffer readBuffer;
 
-	public IncomingData(byte[] bytesArray, SocketContainer sc) {
-		this.bytesArray = bytesArray;
+	public IncomingData(ByteBuffer readBuffer, SocketContainer sc) {
+		this.readBuffer = readBuffer;
 		this.sc = sc;
 	}
 
@@ -14,7 +16,8 @@ public class IncomingData {
 		return sc;
 	}
 
-	public byte[] getBytesArray() {
-		return bytesArray;
+	public ByteBuffer getReadBuffer() {
+		return readBuffer;
 	}
+
 }

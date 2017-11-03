@@ -20,7 +20,6 @@ public class SocketProcessor implements Runnable {
 	
 	private Queue<Message> outboundMessageQueue;
 
-	private ByteBuffer readBuffer = ByteBuffer.allocate(2048);
 	private ByteBuffer writeBuffer = ByteBuffer.allocate(2048);
 
 	private Selector selector;
@@ -119,14 +118,13 @@ public class SocketProcessor implements Runnable {
 
 	private void readData(SocketContainer sc) throws IOException {
 
+		ByteBuffer readBuffer = ByteBuffer.allocate(2048);
+
 		int bytesRead = sc.read(readBuffer);
 		readBuffer.flip();
 
 		if (bytesRead > 0) {
-			byte[] bytesArray = new byte[readBuffer.remaining()];
-			readBuffer.get(bytesArray, 0, bytesArray.length);
-		    
-			IncomingData data = new IncomingData(bytesArray, sc);
+			IncomingData data = new IncomingData(readBuffer, sc);
 			protocolProcessor.processData(data);
 		}
 
