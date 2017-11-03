@@ -20,8 +20,6 @@ public class SocketProcessor implements Runnable {
 	
 	private Queue<Message> outboundMessageQueue;
 
-	private ByteBuffer writeBuffer = ByteBuffer.allocate(2048);
-
 	private Selector selector;
 
 	private ProtocolProcessor protocolProcessor;
@@ -103,13 +101,10 @@ public class SocketProcessor implements Runnable {
 	private void writeToSocket(SelectionKey key) throws IOException {
 		Message message = (Message) key.attachment();
 
-		writeBuffer.clear();
-		writeBuffer.put(message.getBody());
-		writeBuffer.flip();
-		
-		int written = message.getSc().write(writeBuffer);
+		int written = message.getSc().write(message.getBody());
 		log.debug("Outbound message to {}, written {} bytes.", message.getSc().getChannel(), written);
-		writeBuffer.clear();
+		
+		message.cleanup();
 
 		key.attach(null);
 		key.cancel();
