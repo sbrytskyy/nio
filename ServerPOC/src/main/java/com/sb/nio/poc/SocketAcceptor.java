@@ -2,6 +2,7 @@ package com.sb.nio.poc;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Queue;
@@ -16,8 +17,11 @@ public class SocketAcceptor implements Runnable {
 	private ServerSocketChannel serverSocketChannel;
 	private Queue<SocketContainer> queue;
 
-	public SocketAcceptor(int port, Queue<SocketContainer> queue) throws IOException {
+	private Selector selector;
+
+	public SocketAcceptor(int port, Queue<SocketContainer> queue, Selector selector) throws IOException {
 		this.queue = queue;
+		this.selector = selector;
 		
 		serverSocketChannel = ServerSocketChannel.open();
 		serverSocketChannel.bind(new InetSocketAddress(port));
@@ -32,6 +36,8 @@ public class SocketAcceptor implements Runnable {
 				
 				SocketContainer sc = new SocketContainer(channel);
 				queue.add(sc);
+				
+				selector.wakeup();
 			} catch (IOException e) {
 				log.error(e.getMessage(), e);
 			}

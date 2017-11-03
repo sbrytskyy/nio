@@ -2,6 +2,7 @@ package com.sb.nio.poc;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.Selector;
 import java.util.Queue;
 
 import org.slf4j.Logger;
@@ -11,6 +12,7 @@ public class SimpleProcessor implements ProtocolProcessor {
 
 	private static final Logger log = LoggerFactory.getLogger(SimpleProcessor.class);
 	private Queue<Message> outboundMessageQueue;
+	private Selector selector;
 
 	@Override
 	public void processData(ByteBuffer readBuffer, SocketContainer sc) throws IOException {
@@ -32,11 +34,13 @@ public class SimpleProcessor implements ProtocolProcessor {
 		message.setBody(httpResponseBytes);
 		
 		outboundMessageQueue.add(message);
+		selector.wakeup();
 	}
 
 	@Override
-	public void setMessageQueue(Queue<Message> outboundMessageQueue) {
+	public void init(Queue<Message> outboundMessageQueue, Selector selector) {
 		this.outboundMessageQueue = outboundMessageQueue;
+		this.selector = selector;
 	}
 
 }
