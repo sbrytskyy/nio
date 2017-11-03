@@ -5,9 +5,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +32,7 @@ public class SocketProcessor implements Runnable {
 		this.protocolProcessor = protocolProcessor;
 		this.selector = selector;
 		
-		outboundMessageQueue = new LinkedList<>();
+		outboundMessageQueue = new ConcurrentLinkedQueue<>();
 		protocolProcessor.init(outboundMessageQueue, selector);
 	}
 
@@ -123,7 +123,11 @@ public class SocketProcessor implements Runnable {
 		readBuffer.flip();
 
 		if (bytesRead > 0) {
-			protocolProcessor.processData(readBuffer, sc);
+			byte[] bytesArray = new byte[readBuffer.remaining()];
+			readBuffer.get(bytesArray, 0, bytesArray.length);
+		    
+			IncomingData data = new IncomingData(bytesArray, sc);
+			protocolProcessor.processData(data);
 		}
 
 		if (readBuffer.remaining() == 0) {

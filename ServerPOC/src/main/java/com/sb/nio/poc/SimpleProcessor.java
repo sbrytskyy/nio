@@ -1,9 +1,11 @@
 package com.sb.nio.poc;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.io.UnsupportedEncodingException;
 import java.nio.channels.Selector;
 import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,33 +16,48 @@ public class SimpleProcessor implements ProtocolProcessor {
 	private Queue<Message> outboundMessageQueue;
 	private Selector selector;
 
-	@Override
-	public void processData(ByteBuffer readBuffer, SocketContainer sc) throws IOException {
-		StringBuilder sb = new StringBuilder();
-		while (readBuffer.hasRemaining()) {
-			sb.append((char) readBuffer.get()); // read 1 byte at a time
-		}
-		log.debug("Incoming data: <<<\n{}>>>", sb.toString());
-		
-		String httpResponse = "HTTP/1.1 200 OK\r\n" +
-                "Content-Length: 38\r\n" +
-                "Content-Type: text/html\r\n" +
-                "\r\n" +
-                "<html><body>Hello World!</body></html>";
+	private BlockingQueue<IncomingData> incoming = new LinkedBlockingQueue<>();
 
-        byte[] httpResponseBytes = httpResponse.getBytes("UTF-8");
-        
-		Message message = new Message(sc);
-		message.setBody(httpResponseBytes);
-		
-		outboundMessageQueue.add(message);
-		selector.wakeup();
+	@Override
+	public void processData(IncomingData data) throws IOException {
+		try {
+			incoming.put(data);
+		} catch (InterruptedException e) {
+			log.error(e.getMessage(), e);
+		}
 	}
 
 	@Override
 	public void init(Queue<Message> outboundMessageQueue, Selector selector) {
 		this.outboundMessageQueue = outboundMessageQueue;
 		this.selector = selector;
+	}
+
+	@Override
+	public void run() {
+		while (true) {
+			try {
+				IncomingData data = incoming.take();
+
+				String s = new String(data.getBytesArray());
+				log.debug("Incoming data: <<<\n{}>>>", s);
+
+				String httpResponse = "HTTP/1.1 200 OK\r\n" + "Content-Length: 38\r\n" + "Content-Type: text/html\r\n"
+						+ "\r\n" + "<html><body>Hello World!</body></html>";
+
+				byte[] httpResponseBytes = httpResponse.getBytes("UTF-8");
+
+				SocketContainer sc = data.getSocketContainer();
+				Message message = new Message(sc);
+				message.setBody(httpResponseBytes);
+
+				outboundMessageQueue.add(message);
+				selector.wakeup();
+
+			} catch (InterruptedException | UnsupportedEncodingException e) {
+				log.error(e.getMessage(), e);
+			}
+		}
 	}
 
 }

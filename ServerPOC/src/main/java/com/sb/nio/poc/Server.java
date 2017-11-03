@@ -33,6 +33,8 @@ public class Server {
 		accepterThread.start();
 		
 		protocolProcessor = new SimpleProcessor();
+		Thread pp = new Thread(protocolProcessor);
+		pp.start();
 		
 		SocketProcessor sp = new SocketProcessor(inboundPortsQueue, protocolProcessor, selector);
 		Thread processorThread = new Thread(sp);
