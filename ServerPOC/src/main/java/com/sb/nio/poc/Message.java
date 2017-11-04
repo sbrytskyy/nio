@@ -7,11 +7,9 @@ public class Message {
 	private SocketContainer sc;
 	private ByteBuffer body;
 
-	public Message(SocketContainer sc) {
+	public Message(SocketContainer sc, ByteBuffer body) {
 		this.sc = sc;
-		
-		// TODO lease ByteBuffer from cache
-		body = ByteBuffer.allocate(2048);
+		this.body = body;
 	}
 
 	public SocketContainer getSc() {
@@ -20,15 +18,5 @@ public class Message {
 
 	public ByteBuffer getBody() {
 		return body;
-	}
-
-	public void cleanup() {
-		// return ByteBuffer
-	}
-
-	public void setBody(byte[] ba) {
-		body.clear();
-		body.put(ba);
-		body.flip();
 	}
 }

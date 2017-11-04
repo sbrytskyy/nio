@@ -24,10 +24,13 @@ public class SocketProcessor implements Runnable {
 
 	private ProtocolProcessor protocolProcessor;
 
-	public SocketProcessor(Queue<SocketContainer> inboundPortsQueue, ProtocolProcessor protocolProcessor, Selector selector) throws IOException {
+	private BufferCache cache;
+
+	public SocketProcessor(Queue<SocketContainer> inboundPortsQueue, ProtocolProcessor protocolProcessor, Selector selector, BufferCache cache) throws IOException {
 		this.inboundPortsQueue = inboundPortsQueue;
 		this.protocolProcessor = protocolProcessor;
 		this.selector = selector;
+		this.cache = cache;
 		
 		outboundMessageQueue = new ConcurrentLinkedQueue<>();
 		protocolProcessor.init(outboundMessageQueue, selector);
@@ -101,10 +104,11 @@ public class SocketProcessor implements Runnable {
 	private void writeToSocket(SelectionKey key) throws IOException {
 		Message message = (Message) key.attachment();
 
-		int written = message.getSc().write(message.getBody());
+		ByteBuffer buffer = message.getBody();
+		int written = message.getSc().write(buffer);
 		log.debug("Outbound message to {}, written {} bytes.", message.getSc().getChannel(), written);
 		
-		message.cleanup();
+		cache.returnBuffer(buffer);
 
 		key.attach(null);
 		key.cancel();
@@ -113,20 +117,14 @@ public class SocketProcessor implements Runnable {
 
 	private void readData(SocketContainer sc) throws IOException {
 
-		ByteBuffer readBuffer = ByteBuffer.allocate(2048);
+		ByteBuffer readBuffer = cache.leaseBuffer();
 
 		int bytesRead = sc.read(readBuffer);
-		readBuffer.flip();
-
 		if (bytesRead > 0) {
 			IncomingData data = new IncomingData(readBuffer, sc);
 			protocolProcessor.processData(data);
+		} else {
+			cache.returnBuffer(readBuffer);
 		}
-
-		if (readBuffer.remaining() == 0) {
-			readBuffer.clear();
-			return;
-		}
-		readBuffer.clear();
 	}
 }

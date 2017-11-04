@@ -18,9 +18,13 @@ public class Server {
 	private Queue<SocketContainer> inboundPortsQueue;
 	private ProtocolProcessor protocolProcessor;
 	
+	private BufferCache cache;
+	
 	public Server(int port) {
 		this.port = port;
 		inboundPortsQueue = new ArrayBlockingQueue<>(MAX_INBOUND_CONNECTIONS);
+		
+		cache = new BufferCache(MAX_INBOUND_CONNECTIONS * 2);
 	}
 
 	public void start() throws IOException {
@@ -36,7 +40,7 @@ public class Server {
 		Thread pp = new Thread(protocolProcessor);
 		pp.start();
 		
-		SocketProcessor sp = new SocketProcessor(inboundPortsQueue, protocolProcessor, selector);
+		SocketProcessor sp = new SocketProcessor(inboundPortsQueue, protocolProcessor, selector, cache);
 		Thread processorThread = new Thread(sp);
 		processorThread.start();
 	}

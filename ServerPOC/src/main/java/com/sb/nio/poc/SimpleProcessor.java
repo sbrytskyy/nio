@@ -40,19 +40,22 @@ public class SimpleProcessor implements ProtocolProcessor {
 			try {
 				IncomingData data = incoming.take();
 				
-				ByteBuffer readBuffer = data.getReadBuffer();
+				ByteBuffer buffer = data.getReadBuffer();
 
-				String s = new String(readBuffer.array());
+				String s = new String(buffer.array());
 				log.debug("Incoming data: <<<\n{}>>>", s);
 
 				String httpResponse = "HTTP/1.1 200 OK\r\n" + "Content-Length: 38\r\n" + "Content-Type: text/html\r\n"
 						+ "\r\n" + "<html><body>Hello World!</body></html>";
 
 				byte[] httpResponseBytes = httpResponse.getBytes("UTF-8");
+				
+				buffer.clear();
+				buffer.put(httpResponseBytes);
+				buffer.flip();
 
 				SocketContainer sc = data.getSocketContainer();
-				Message message = new Message(sc);
-				message.setBody(httpResponseBytes);
+				Message message = new Message(sc, buffer);
 
 				outboundMessageQueue.add(message);
 				selector.wakeup();
