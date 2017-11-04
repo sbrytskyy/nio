@@ -36,7 +36,7 @@ public class SocketProcessor implements Runnable {
 		this.selector = Selector.open();
 		outboundMessageQueue = new ConcurrentLinkedQueue<>();
 		protocolProcessor.init(outboundMessageQueue, selector);
-		
+
 		serverSocketInit(port);
 	}
 

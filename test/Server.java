@@ -11,7 +11,7 @@ public class Server {
 
 	private int port;
 	private ProtocolProcessor protocolProcessor;
-	
+
 	public Server(int port) {
 		this.port = port;
 	}
@@ -22,7 +22,7 @@ public class Server {
 		protocolProcessor = new SimpleProcessor();
 		Thread pp = new Thread(protocolProcessor);
 		pp.start();
-		
+
 		SocketProcessor sp = new SocketProcessor(protocolProcessor, port);
 		Thread processorThread = new Thread(sp);
 		processorThread.start();

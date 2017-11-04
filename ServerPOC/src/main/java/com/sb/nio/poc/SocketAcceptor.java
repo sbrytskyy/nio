@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 public class SocketAcceptor implements Runnable {
 
 	private static final Logger log = LoggerFactory.getLogger(SocketAcceptor.class);
-	
+
 	private ServerSocketChannel serverSocketChannel;
 	private Queue<SocketContainer> queue;
 
@@ -22,8 +22,9 @@ public class SocketAcceptor implements Runnable {
 	public SocketAcceptor(int port, Queue<SocketContainer> queue, Selector selector) throws IOException {
 		this.queue = queue;
 		this.selector = selector;
-		
+
 		serverSocketChannel = ServerSocketChannel.open();
+		serverSocketChannel.configureBlocking(false);
 		serverSocketChannel.bind(new InetSocketAddress(port));
 	}
 
@@ -32,12 +33,14 @@ public class SocketAcceptor implements Runnable {
 		while (true) {
 			try {
 				SocketChannel channel = serverSocketChannel.accept();
-				log.debug("Socket accepted: " + channel);
-				
-				SocketContainer sc = new SocketContainer(channel);
-				queue.add(sc);
-				
-				selector.wakeup();
+				if (channel != null) {
+					log.debug("Socket accepted: " + channel);
+
+					SocketContainer sc = new SocketContainer(channel);
+					queue.add(sc);
+
+					selector.wakeup();
+				}
 			} catch (IOException e) {
 				log.error(e.getMessage(), e);
 			}

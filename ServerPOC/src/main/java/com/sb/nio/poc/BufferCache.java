@@ -14,15 +14,9 @@ public class BufferCache {
 
 	private static final int DEFAULT_BUFFER_SIZE = 2048;
 
-	private int capacity;
-
 	private Queue<ByteBuffer> buffers = new ConcurrentLinkedQueue<>();
 
 	private AtomicLong leased = new AtomicLong();
-
-	public BufferCache(int capacity) {
-		this.capacity = capacity;
-	}
 
 	public ByteBuffer leaseBuffer() {
 		ByteBuffer buffer = buffers.poll();
