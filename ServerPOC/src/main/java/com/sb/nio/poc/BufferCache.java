@@ -18,9 +18,6 @@ public class BufferCache {
 
 	private AtomicLong leased = new AtomicLong();
 
-	public BufferCache() {
-	}
-
 	public ByteBuffer leaseBuffer() {
 		ByteBuffer buffer = buffers.poll();
 		if (buffer == null) {
