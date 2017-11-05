@@ -76,7 +76,7 @@ public class SocketProcessor implements Runnable {
 
 				processMessages();
 
-			} catch (IOException e) {
+			} catch (Exception e) {
 				log.error(e.getMessage(), e);
 			}
 		}
@@ -108,9 +108,9 @@ public class SocketProcessor implements Runnable {
 	private void readFromSocket(SelectionKey key) throws IOException {
 		SocketContainer sc = (SocketContainer) key.attachment();
 
-		readData(sc);
+		boolean result = readData(sc);
 
-		if (sc.isEndOfStreamReached()) {
+		if (!result || sc.isEndOfStreamReached()) {
 			log.debug("Socket has been closed: {}", sc.getChannel());
 
 			key.attach(null);
@@ -133,16 +133,22 @@ public class SocketProcessor implements Runnable {
 		key.cancel();
 	}
 
-	private void readData(SocketContainer sc) throws IOException {
+	private boolean readData(SocketContainer sc) {
 
 		ByteBuffer readBuffer = cache.leaseBuffer();
-
-		int bytesRead = sc.read(readBuffer);
-		if (bytesRead > 0) {
-			IncomingData data = new IncomingData(readBuffer, sc);
-			protocolProcessor.processData(data);
-		} else {
+		try {
+			int bytesRead = sc.read(readBuffer);
+			if (bytesRead > 0) {
+				IncomingData data = new IncomingData(readBuffer, sc);
+				protocolProcessor.processData(data);
+			}
+		} catch (IOException ex) {
+			log.error(ex.getMessage(), ex);
 			cache.returnBuffer(readBuffer);
+
+			return false;
 		}
+
+		return true;
 	}
 }
