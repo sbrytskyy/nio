@@ -17,7 +17,7 @@ public class SocketProcessor implements Runnable {
 	private static final Logger log = LoggerFactory.getLogger(SocketProcessor.class);
 
 	private Queue<SocketContainer> inboundPortsQueue;
-	
+
 	private Queue<Message> outboundMessageQueue;
 
 	private Selector selector;
@@ -26,12 +26,13 @@ public class SocketProcessor implements Runnable {
 
 	private BufferCache cache;
 
-	public SocketProcessor(Queue<SocketContainer> inboundPortsQueue, ProtocolProcessor protocolProcessor, Selector selector, BufferCache cache) throws IOException {
+	public SocketProcessor(Queue<SocketContainer> inboundPortsQueue, ProtocolProcessor protocolProcessor,
+			Selector selector, BufferCache cache) throws IOException {
 		this.inboundPortsQueue = inboundPortsQueue;
 		this.protocolProcessor = protocolProcessor;
 		this.selector = selector;
 		this.cache = cache;
-		
+
 		outboundMessageQueue = new ConcurrentLinkedQueue<>();
 		protocolProcessor.init(outboundMessageQueue, selector);
 	}
@@ -41,30 +42,31 @@ public class SocketProcessor implements Runnable {
 		while (true) {
 			try {
 				int select = selector.select();
-								
+
 				if (select > 0) {
 					Set<SelectionKey> keys = selector.selectedKeys();
 
 					Iterator<SelectionKey> it = keys.iterator();
 					while (it.hasNext()) {
 						SelectionKey key = it.next();
-						
-						if (!key.isValid()) continue;
+
+						if (!key.isValid())
+							continue;
 
 						if (key.isReadable()) {
 							readFromSocket(key);
 						}
-						
+
 						if (key.isWritable()) {
 							writeToSocket(key);
 						}
 					}
 				}
-				
+
 				processSockets();
 				processMessages();
 
-			} catch (IOException e) {
+			} catch (Exception e) {
 				log.error(e.getMessage(), e);
 			}
 		}
@@ -90,9 +92,9 @@ public class SocketProcessor implements Runnable {
 	private void readFromSocket(SelectionKey key) throws IOException {
 		SocketContainer sc = (SocketContainer) key.attachment();
 
-		readData(sc);
+		boolean result = readData(sc);
 
-		if (sc.isEndOfStreamReached()) {
+		if (!result || sc.isEndOfStreamReached()) {
 			log.debug("Socket has been closed: {}", sc.getChannel());
 
 			key.attach(null);
@@ -107,7 +109,7 @@ public class SocketProcessor implements Runnable {
 		ByteBuffer buffer = message.getBody();
 		int written = message.getSc().write(buffer);
 		log.debug("Outbound message to {}, written {} bytes.", message.getSc().getChannel(), written);
-		
+
 		cache.returnBuffer(buffer);
 
 		key.attach(null);
@@ -115,16 +117,22 @@ public class SocketProcessor implements Runnable {
 		key.cancel();
 	}
 
-	private void readData(SocketContainer sc) throws IOException {
+	private boolean readData(SocketContainer sc) {
 
 		ByteBuffer readBuffer = cache.leaseBuffer();
-
-		int bytesRead = sc.read(readBuffer);
-		if (bytesRead > 0) {
-			IncomingData data = new IncomingData(readBuffer, sc);
-			protocolProcessor.processData(data);
-		} else {
+		try {
+			int bytesRead = sc.read(readBuffer);
+			if (bytesRead > 0) {
+				IncomingData data = new IncomingData(readBuffer, sc);
+				protocolProcessor.processData(data);
+			}
+		} catch (IOException ex) {
+			log.error(ex.getMessage(), ex);
 			cache.returnBuffer(readBuffer);
+
+			return false;
 		}
+
+		return true;
 	}
 }
