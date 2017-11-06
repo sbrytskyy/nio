@@ -122,7 +122,7 @@ public class SocketProcessor implements Runnable {
 			} else {
 				long socketId = socketIdGenerator.getAndIncrement();
 				socketsMap.put(socketId, channel);
-				
+
 				IncomingData data = new IncomingData(readBuffer, socketId);
 				protocolProcessor.processData(data);
 			}
@@ -146,19 +146,22 @@ public class SocketProcessor implements Runnable {
 		ByteBuffer byteBuffer = message.getBody();
 
 		int totalWritten = 0;
-		
-		while(byteBuffer.hasRemaining()) {
+
+		while (byteBuffer.hasRemaining()) {
 			int written = channel.write(byteBuffer);
 			totalWritten += written;
 		}
-		
+
 		log.debug("Outbound message to {}, written {} bytes.", channel, totalWritten);
 
 		cache.returnBuffer(byteBuffer);
-
 		key.attach(null);
-		// key.channel().close();
-		// key.cancel();
-		key.interestOps(SelectionKey.OP_READ);
+
+		if (message.isKeepAlive()) {
+			key.interestOps(SelectionKey.OP_READ);
+		} else {
+			key.channel().close();
+			key.cancel();
+		}
 	}
 }

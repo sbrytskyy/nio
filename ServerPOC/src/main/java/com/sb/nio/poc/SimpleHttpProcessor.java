@@ -1,5 +1,6 @@
 package com.sb.nio.poc;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Selector;
 import java.util.Queue;
@@ -8,12 +9,17 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import org.apache.http.Header;
+import org.apache.http.HttpException;
+import org.apache.http.HttpRequest;
+import org.apache.http.protocol.HTTP;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SimpleProcessor implements ProtocolProcessor {
+public class SimpleHttpProcessor implements ProtocolProcessor {
 
-	private static final Logger log = LoggerFactory.getLogger(SimpleProcessor.class);
+	private static final Logger log = LoggerFactory.getLogger(SimpleHttpProcessor.class);
+	
 	private static Queue<Message> outboundMessageQueue;
 	private static Selector selector;
 
@@ -32,8 +38,8 @@ public class SimpleProcessor implements ProtocolProcessor {
 
 	@Override
 	public void init(Queue<Message> outboundMessageQueue, Selector selector) {
-		SimpleProcessor.outboundMessageQueue = outboundMessageQueue;
-		SimpleProcessor.selector = selector;
+		SimpleHttpProcessor.outboundMessageQueue = outboundMessageQueue;
+		SimpleHttpProcessor.selector = selector;
 	}
 
 	@Override
@@ -65,6 +71,14 @@ public class SimpleProcessor implements ProtocolProcessor {
 			String s = new String(buffer.array());
 			log.debug("Incoming data: <<<\n{}>>>", s);
 
+			boolean keepAlive = false;
+			try {
+				HttpRequest request = HttpHelper.create(buffer);
+				keepAlive = HttpHelper.isKeepAlive(request);
+			} catch (IOException | HttpException e) {
+				log.error(e.getMessage(), e);
+			}
+
 			String httpResponse = "HTTP/1.1 200 OK\r\n" + "Content-Length: 38\r\n" + "Content-Type: text/html\r\n"
 					+ "\r\n" + "<html><body>Hello World!</body></html>";
 
@@ -75,12 +89,13 @@ public class SimpleProcessor implements ProtocolProcessor {
 			buffer.flip();
 			
 			// TODO think about returning buffers, if message is not ready yet.
-			
-			Message message = new Message(buffer, data.getSocketId());
+						
+			Message message = new Message(buffer, data.getSocketId(), keepAlive);
 
 			outboundMessageQueue.add(message);
 			selector.wakeup();
 		}
 	}
+	
 
 }

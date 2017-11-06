@@ -19,7 +19,7 @@ public class Server {
 	public void start() throws IOException {
 		log.info("Server configured with port: {}", port);
 
-		protocolProcessor = new SimpleProcessor();
+		protocolProcessor = new SimpleHttpProcessor();
 		Thread pp = new Thread(protocolProcessor);
 		pp.setName("Protocol Processor");
 		pp.start();
