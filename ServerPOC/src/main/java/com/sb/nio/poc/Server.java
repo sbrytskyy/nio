@@ -21,10 +21,12 @@ public class Server {
 
 		protocolProcessor = new SimpleProcessor();
 		Thread pp = new Thread(protocolProcessor);
+		pp.setName("Protocol Processor");
 		pp.start();
 		
 		SocketProcessor sp = new SocketProcessor(protocolProcessor, port);
 		Thread processorThread = new Thread(sp);
+		processorThread.setName("Socket Processor");
 		processorThread.start();
 	}
 }
