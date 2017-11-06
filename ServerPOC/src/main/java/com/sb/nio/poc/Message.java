@@ -4,19 +4,19 @@ import java.nio.ByteBuffer;
 
 public class Message {
 
-	private SocketContainer sc;
 	private ByteBuffer body;
+	private long socketId;
 
-	public Message(SocketContainer sc, ByteBuffer body) {
-		this.sc = sc;
-		this.body = body;
-	}
-
-	public SocketContainer getSc() {
-		return sc;
+	public Message(ByteBuffer buffer, long socketId) {
+		body = buffer;
+		this.socketId = socketId;
 	}
 
 	public ByteBuffer getBody() {
 		return body;
+	}
+
+	public long getSocketId() {
+		return socketId;
 	}
 }

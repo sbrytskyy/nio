@@ -4,20 +4,20 @@ import java.nio.ByteBuffer;
 
 public class IncomingData {
 
-	private SocketContainer sc;
 	private ByteBuffer readBuffer;
+	private long socketId;
 
-	public IncomingData(ByteBuffer readBuffer, SocketContainer sc) {
+	public IncomingData(ByteBuffer readBuffer, long socketId) {
 		this.readBuffer = readBuffer;
-		this.sc = sc;
-	}
-
-	public SocketContainer getSocketContainer() {
-		return sc;
+		this.socketId = socketId;
 	}
 
 	public ByteBuffer getReadBuffer() {
 		return readBuffer;
+	}
+
+	public long getSocketId() {
+		return socketId;
 	}
 
 }

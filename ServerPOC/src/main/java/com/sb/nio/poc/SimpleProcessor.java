@@ -1,6 +1,5 @@
 package com.sb.nio.poc;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Selector;
 import java.util.Queue;
@@ -23,7 +22,7 @@ public class SimpleProcessor implements ProtocolProcessor {
 	private ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
 
 	@Override
-	public void processData(IncomingData data) throws IOException {
+	public void processData(IncomingData data) {
 		try {
 			incoming.put(data);
 		} catch (InterruptedException e) {
@@ -74,9 +73,10 @@ public class SimpleProcessor implements ProtocolProcessor {
 			buffer.clear();
 			buffer.put(httpResponseBytes);
 			buffer.flip();
-
-			SocketContainer sc = data.getSocketContainer();
-			Message message = new Message(sc, buffer);
+			
+			// TODO think about returning buffers, if message is not ready yet.
+			
+			Message message = new Message(buffer, data.getSocketId());
 
 			outboundMessageQueue.add(message);
 			selector.wakeup();

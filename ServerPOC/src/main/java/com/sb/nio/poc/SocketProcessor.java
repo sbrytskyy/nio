@@ -7,10 +7,13 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +21,10 @@ import org.slf4j.LoggerFactory;
 public class SocketProcessor implements Runnable {
 
 	private static final Logger log = LoggerFactory.getLogger(SocketProcessor.class);
+
+	private AtomicLong socketIdGenerator = new AtomicLong(1);
+
+	private Map<Long, SocketChannel> socketsMap = new HashMap<>();
 
 	private Queue<Message> outboundMessageQueue;
 
@@ -36,7 +43,7 @@ public class SocketProcessor implements Runnable {
 		this.selector = Selector.open();
 		outboundMessageQueue = new ConcurrentLinkedQueue<>();
 		protocolProcessor.init(outboundMessageQueue, selector);
-		
+
 		serverSocketInit(port);
 	}
 
@@ -90,65 +97,68 @@ public class SocketProcessor implements Runnable {
 			log.debug("Socket accepted: " + socketChannel);
 			socketChannel.configureBlocking(false);
 
-			SocketContainer sc = new SocketContainer(socketChannel);
-
-			SelectionKey keyRead = socketChannel.register(selector, SelectionKey.OP_READ);
-			keyRead.attach(sc);
+			socketChannel.register(selector, SelectionKey.OP_READ);
 		}
 	}
 
 	private void processMessages() throws IOException {
 		while (!outboundMessageQueue.isEmpty()) {
 			Message message = outboundMessageQueue.poll();
-			SelectionKey key = message.getSc().getChannel().register(selector, SelectionKey.OP_WRITE);
-			key.attach(message);
+			SocketChannel channel = socketsMap.get(message.getSocketId());
+			channel.register(selector, SelectionKey.OP_WRITE, message);
 		}
 	}
 
 	private void readFromSocket(SelectionKey key) throws IOException {
-		SocketContainer sc = (SocketContainer) key.attachment();
-
-		boolean result = readData(sc);
-
-		if (!result || sc.isEndOfStreamReached()) {
-			log.debug("Socket has been closed: {}", sc.getChannel());
-
-			key.attach(null);
-			key.channel().close();
-			key.cancel();
-		}
-	}
-
-	private void writeToSocket(SelectionKey key) throws IOException {
-		Message message = (Message) key.attachment();
-
-		ByteBuffer buffer = message.getBody();
-		int written = message.getSc().write(buffer);
-		log.debug("Outbound message to {}, written {} bytes.", message.getSc().getChannel(), written);
-
-		cache.returnBuffer(buffer);
-
-		key.attach(null);
-		key.channel().close();
-		key.cancel();
-	}
-
-	private boolean readData(SocketContainer sc) {
+		SocketChannel channel = (SocketChannel) key.channel();
+		boolean result = true;
 
 		ByteBuffer readBuffer = cache.leaseBuffer();
 		try {
-			int bytesRead = sc.read(readBuffer);
-			if (bytesRead > 0) {
-				IncomingData data = new IncomingData(readBuffer, sc);
+			int bytesRead = channel.read(readBuffer);
+			if (bytesRead == -1) {
+				log.debug("Socket has been closed by client: {}", channel);
+				result = false;
+			} else {
+				long socketId = socketIdGenerator.getAndIncrement();
+				socketsMap.put(socketId, channel);
+				
+				IncomingData data = new IncomingData(readBuffer, socketId);
 				protocolProcessor.processData(data);
 			}
 		} catch (IOException ex) {
 			log.error(ex.getMessage(), ex);
-			cache.returnBuffer(readBuffer);
-
-			return false;
+			result = false;
 		}
 
-		return true;
+		if (!result) {
+			key.channel().close();
+			key.cancel();
+
+			cache.returnBuffer(readBuffer);
+		}
+	}
+
+	private void writeToSocket(SelectionKey key) throws IOException {
+		SocketChannel channel = (SocketChannel) key.channel();
+		Message message = (Message) key.attachment();
+
+		ByteBuffer byteBuffer = message.getBody();
+
+		int totalWritten = 0;
+		
+		while(byteBuffer.hasRemaining()) {
+			int written = channel.write(byteBuffer);
+			totalWritten += written;
+		}
+		
+		log.debug("Outbound message to {}, written {} bytes.", channel, totalWritten);
+
+		cache.returnBuffer(byteBuffer);
+
+		key.attach(null);
+		// key.channel().close();
+		// key.cancel();
+		key.interestOps(SelectionKey.OP_READ);
 	}
 }
