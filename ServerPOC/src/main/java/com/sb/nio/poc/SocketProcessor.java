@@ -1,9 +1,12 @@
 package com.sb.nio.poc;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
@@ -16,24 +19,32 @@ public class SocketProcessor implements Runnable {
 
 	private static final Logger log = LoggerFactory.getLogger(SocketProcessor.class);
 
-	private Queue<SocketContainer> inboundPortsQueue;
-	
 	private Queue<Message> outboundMessageQueue;
 
+	private ServerSocketChannel serverSocketChannel;
 	private Selector selector;
 
 	private ProtocolProcessor protocolProcessor;
 
 	private BufferCache cache;
 
-	public SocketProcessor(Queue<SocketContainer> inboundPortsQueue, ProtocolProcessor protocolProcessor, Selector selector, BufferCache cache) throws IOException {
-		this.inboundPortsQueue = inboundPortsQueue;
+	public SocketProcessor(ProtocolProcessor protocolProcessor, int port) throws IOException {
+
 		this.protocolProcessor = protocolProcessor;
-		this.selector = selector;
-		this.cache = cache;
-		
+		this.cache = new BufferCache();
+
+		this.selector = Selector.open();
 		outboundMessageQueue = new ConcurrentLinkedQueue<>();
 		protocolProcessor.init(outboundMessageQueue, selector);
+		
+		serverSocketInit(port);
+	}
+
+	private void serverSocketInit(int port) throws IOException {
+		serverSocketChannel = ServerSocketChannel.open();
+		serverSocketChannel.configureBlocking(false);
+		serverSocketChannel.bind(new InetSocketAddress(port));
+		serverSocketChannel.register(this.selector, SelectionKey.OP_ACCEPT);
 	}
 
 	@Override
@@ -41,32 +52,48 @@ public class SocketProcessor implements Runnable {
 		while (true) {
 			try {
 				int select = selector.select();
-								
+
 				if (select > 0) {
 					Set<SelectionKey> keys = selector.selectedKeys();
 
 					Iterator<SelectionKey> it = keys.iterator();
 					while (it.hasNext()) {
 						SelectionKey key = it.next();
-						
-						if (!key.isValid()) continue;
+						it.remove();
 
-						if (key.isReadable()) {
+						if (!key.isValid())
+							continue;
+
+						if (key.isAcceptable()) {
+							acceptSocket(key);
+						} else if (key.isReadable()) {
 							readFromSocket(key);
-						}
-						
-						if (key.isWritable()) {
+						} else if (key.isWritable()) {
 							writeToSocket(key);
 						}
 					}
 				}
-				
-				processSockets();
+
 				processMessages();
 
-			} catch (IOException e) {
+			} catch (Exception e) {
 				log.error(e.getMessage(), e);
 			}
+		}
+	}
+
+	private void acceptSocket(SelectionKey key) throws IOException {
+		ServerSocketChannel serverSocketChannel = (ServerSocketChannel) key.channel();
+
+		SocketChannel socketChannel = serverSocketChannel.accept();
+		if (socketChannel != null) {
+			log.debug("Socket accepted: " + socketChannel);
+			socketChannel.configureBlocking(false);
+
+			SocketContainer sc = new SocketContainer(socketChannel);
+
+			SelectionKey keyRead = socketChannel.register(selector, SelectionKey.OP_READ);
+			keyRead.attach(sc);
 		}
 	}
 
@@ -78,26 +105,17 @@ public class SocketProcessor implements Runnable {
 		}
 	}
 
-	private void processSockets() throws IOException {
-		while (!inboundPortsQueue.isEmpty()) {
-			SocketContainer sc = inboundPortsQueue.poll();
-			sc.getChannel().configureBlocking(false);
-			SelectionKey key = sc.getChannel().register(selector, SelectionKey.OP_READ);
-			key.attach(sc);
-		}
-	}
-
 	private void readFromSocket(SelectionKey key) throws IOException {
 		SocketContainer sc = (SocketContainer) key.attachment();
 
-		readData(sc);
+		boolean result = readData(sc);
 
-		if (sc.isEndOfStreamReached()) {
+		if (!result || sc.isEndOfStreamReached()) {
 			log.debug("Socket has been closed: {}", sc.getChannel());
 
 			key.attach(null);
-			key.cancel();
 			key.channel().close();
+			key.cancel();
 		}
 	}
 
@@ -107,24 +125,30 @@ public class SocketProcessor implements Runnable {
 		ByteBuffer buffer = message.getBody();
 		int written = message.getSc().write(buffer);
 		log.debug("Outbound message to {}, written {} bytes.", message.getSc().getChannel(), written);
-		
+
 		cache.returnBuffer(buffer);
 
 		key.attach(null);
-		key.cancel();
 		key.channel().close();
+		key.cancel();
 	}
 
-	private void readData(SocketContainer sc) throws IOException {
+	private boolean readData(SocketContainer sc) {
 
 		ByteBuffer readBuffer = cache.leaseBuffer();
-
-		int bytesRead = sc.read(readBuffer);
-		if (bytesRead > 0) {
-			IncomingData data = new IncomingData(readBuffer, sc);
-			protocolProcessor.processData(data);
-		} else {
+		try {
+			int bytesRead = sc.read(readBuffer);
+			if (bytesRead > 0) {
+				IncomingData data = new IncomingData(readBuffer, sc);
+				protocolProcessor.processData(data);
+			}
+		} catch (IOException ex) {
+			log.error(ex.getMessage(), ex);
 			cache.returnBuffer(readBuffer);
+
+			return false;
 		}
+
+		return true;
 	}
 }
