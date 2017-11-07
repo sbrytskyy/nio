@@ -17,6 +17,15 @@ public class BufferCache {
 	private Queue<ByteBuffer> buffers = new ConcurrentLinkedQueue<>();
 
 	private AtomicLong leased = new AtomicLong();
+	
+	private static BufferCache instance = new BufferCache();
+	
+	private BufferCache() {
+	}
+
+	public static BufferCache getInstance() {
+		return instance;
+	}
 
 	public ByteBuffer leaseBuffer() {
 		ByteBuffer buffer = buffers.poll();

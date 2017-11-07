@@ -9,10 +9,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 
-import org.apache.http.Header;
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
-import org.apache.http.protocol.HTTP;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,6 +22,8 @@ public class SimpleHttpProcessor implements ProtocolProcessor {
 	private static Selector selector;
 
 	private BlockingQueue<IncomingData> incoming = new LinkedBlockingQueue<>();
+	
+	private static BufferCache cache = BufferCache.getInstance();
 
 	private ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
 
@@ -65,37 +65,37 @@ public class SimpleHttpProcessor implements ProtocolProcessor {
 			this.data = data;
 		}
 
+		// TODO redesign to separate process request and prepare response
 		public void run() {
-			ByteBuffer buffer = data.getReadBuffer();
+			ByteBuffer readBuffer = data.getReadBuffer();
 
-			String s = new String(buffer.array());
+			String s = new String(readBuffer.array());
 			log.debug("Incoming data: <<<\n{}>>>", s);
 
 			boolean keepAlive = false;
 			try {
-				HttpRequest request = HttpHelper.create(buffer);
+				HttpRequest request = HttpHelper.create(readBuffer);
 				keepAlive = HttpHelper.isKeepAlive(request);
 			} catch (IOException | HttpException e) {
 				log.error(e.getMessage(), e);
 			}
-
+			cache.returnBuffer(readBuffer);
+			
+			// Preparing response
+			ByteBuffer writeBuffer = cache.leaseBuffer();
 			String httpResponse = "HTTP/1.1 200 OK\r\n" + "Content-Length: 38\r\n" + "Content-Type: text/html\r\n"
 					+ "\r\n" + "<html><body>Hello World!</body></html>";
 
 			byte[] httpResponseBytes = httpResponse.getBytes();
 
-			buffer.clear();
-			buffer.put(httpResponseBytes);
-			buffer.flip();
+			writeBuffer.clear();
+			writeBuffer.put(httpResponseBytes);
+			writeBuffer.flip();
 			
-			// TODO think about returning buffers, if message is not ready yet.
-						
-			Message message = new Message(buffer, data.getSocketId(), keepAlive);
+			Message message = new Message(writeBuffer, data.getSocketId(), keepAlive);
 
 			outboundMessageQueue.add(message);
 			selector.wakeup();
 		}
 	}
-	
-
 }

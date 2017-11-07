@@ -33,12 +33,11 @@ public class SocketProcessor implements Runnable {
 
 	private ProtocolProcessor protocolProcessor;
 
-	private BufferCache cache;
+	private BufferCache cache = BufferCache.getInstance();
 
 	public SocketProcessor(ProtocolProcessor protocolProcessor, int port) throws IOException {
 
 		this.protocolProcessor = protocolProcessor;
-		this.cache = new BufferCache();
 
 		this.selector = Selector.open();
 		outboundMessageQueue = new ConcurrentLinkedQueue<>();
