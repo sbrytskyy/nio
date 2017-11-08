@@ -18,8 +18,8 @@ public class SimpleHttpProcessor implements ProtocolProcessor {
 
 	private static final Logger log = LoggerFactory.getLogger(SimpleHttpProcessor.class);
 	
-	private static Queue<Message> outboundMessageQueue;
-	private static Selector selector;
+	private Queue<Message> outboundMessageQueue;
+	private Selector selector;
 
 	private BlockingQueue<IncomingData> incoming = new LinkedBlockingQueue<>();
 	
@@ -38,8 +38,8 @@ public class SimpleHttpProcessor implements ProtocolProcessor {
 
 	@Override
 	public void init(Queue<Message> outboundMessageQueue, Selector selector) {
-		SimpleHttpProcessor.outboundMessageQueue = outboundMessageQueue;
-		SimpleHttpProcessor.selector = selector;
+		this.outboundMessageQueue = outboundMessageQueue;
+		this.selector = selector;
 	}
 
 	@Override
@@ -57,7 +57,7 @@ public class SimpleHttpProcessor implements ProtocolProcessor {
 		}
 	}
 
-	static class Task implements Runnable {
+	class Task implements Runnable {
 
 		private IncomingData data;
 
@@ -68,6 +68,12 @@ public class SimpleHttpProcessor implements ProtocolProcessor {
 		// TODO redesign to separate process request and prepare response
 		public void run() {
 			ByteBuffer readBuffer = data.getReadBuffer();
+			
+			// add buffer to cache using socket Id
+			// check cached message if enough to proceed 
+			// if yes - proceed with response
+			// if no - wait for other chunk
+			// think what to do with leftover
 
 			String s = new String(readBuffer.array());
 			log.debug("Incoming data: <<<\n{}>>>", s);
