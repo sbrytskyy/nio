@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SocketProcessor implements Runnable {
+public class SocketProcessor implements Runnable, MessageListener {
 
 	private static final Logger log = LoggerFactory.getLogger(SocketProcessor.class);
 
@@ -31,18 +31,18 @@ public class SocketProcessor implements Runnable {
 	private ServerSocketChannel serverSocketChannel;
 	private Selector selector;
 
-	private ProtocolProcessor protocolProcessor;
+	private IDataProcessor protocolProcessor;
 
 	private BufferCache cache = BufferCache.getInstance();
 
-	public SocketProcessor(ProtocolProcessor protocolProcessor, int port) throws IOException {
+	public SocketProcessor(IDataProcessor protocolProcessor, int port) throws IOException {
 
 		this.protocolProcessor = protocolProcessor;
 
 		this.selector = Selector.open();
 		this.outboundMessageQueue = new ConcurrentLinkedQueue<>();
 		
-		protocolProcessor.init(outboundMessageQueue, selector);
+		protocolProcessor.setMessageListener(this);
 
 		serverSocketInit(port);
 	}
@@ -163,5 +163,11 @@ public class SocketProcessor implements Runnable {
 			key.channel().close();
 			key.cancel();
 		}
+	}
+
+	@Override
+	public void messageReady(Message message) {
+		outboundMessageQueue.add(message);
+		selector.wakeup();
 	}
 }

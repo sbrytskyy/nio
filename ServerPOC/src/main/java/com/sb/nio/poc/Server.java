@@ -10,7 +10,7 @@ public class Server {
 	private static final Logger log = LoggerFactory.getLogger(Server.class);
 
 	private int port;
-	private ProtocolProcessor protocolProcessor;
+	private IDataProcessor protocolProcessor;
 	
 	public Server(int port) {
 		this.port = port;
@@ -19,7 +19,7 @@ public class Server {
 	public void start() throws IOException {
 		log.info("Server configured with port: {}", port);
 
-		protocolProcessor = new SimpleHttpProcessor();
+		protocolProcessor = new DataProcessor();
 		Thread pp = new Thread(protocolProcessor);
 		pp.setName("Protocol Processor");
 		pp.start();
