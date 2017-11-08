@@ -22,7 +22,7 @@ public abstract class ProtocolProcessor implements Runnable {
 	public void run() {
 		ByteBuffer readBuffer = data.getReadBuffer();
 
-		boolean keepAlive = readData(readBuffer);
+		boolean keepAlive = isKeepAlive(readBuffer);
 		
 		// add buffer to cache using socket Id
 		// check cached message if enough to proceed 
@@ -35,13 +35,15 @@ public abstract class ProtocolProcessor implements Runnable {
 		// think what to do with leftover
 
 		ByteBuffer writeBuffer = cache.leaseBuffer();
-		Message message = prepareResponse(writeBuffer, data.getSocketId(), keepAlive);
-
-		listener.messageReady(message);
+		boolean ready = prepareResponse(readBuffer, writeBuffer);
+		if (ready) {
+			Message message = new Message(writeBuffer, data.getSocketId(), keepAlive);
+			listener.messageReady(message);
+		}
 	}
 
-	protected abstract Message prepareResponse(ByteBuffer writeBuffer, long socketId, boolean keepAlive);
+	protected abstract boolean prepareResponse(final ByteBuffer readBuffer, ByteBuffer writeBuffer);
 
-	protected abstract boolean readData(ByteBuffer readBuffer);
+	protected abstract boolean isKeepAlive(ByteBuffer readBuffer);
 }
 

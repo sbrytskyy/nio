@@ -16,7 +16,10 @@ public class HttpSimpleProcessor extends ProtocolProcessor {
 
 	private static final Logger log = LoggerFactory.getLogger(HttpSimpleProcessor.class);
 
-	protected Message prepareResponse(ByteBuffer writeBuffer, long socketId, boolean keepAlive) {
+	protected boolean prepareResponse(final ByteBuffer readBuffer, ByteBuffer writeBuffer) {
+		String s = new String(readBuffer.array());
+		log.debug("Incoming data: <<<\n{}>>>", s);
+
 		// - Preparing response
 		String httpResponse = "HTTP/1.1 200 OK\r\n" + "Content-Length: 38\r\n" + "Content-Type: text/html\r\n"
 				+ "\r\n" + "<html><body>Hello World!</body></html>";
@@ -27,14 +30,10 @@ public class HttpSimpleProcessor extends ProtocolProcessor {
 		writeBuffer.put(httpResponseBytes);
 		writeBuffer.flip();
 		
-		Message message = new Message(writeBuffer, socketId, keepAlive);
-		return message;
+		return true;
 	}
 
-	protected boolean readData(ByteBuffer readBuffer) {
-		String s = new String(readBuffer.array());
-		log.debug("Incoming data: <<<\n{}>>>", s);
-
+	protected boolean isKeepAlive(ByteBuffer readBuffer) {
 		boolean keepAlive = false;
 		try {
 			HttpRequest request = HttpHelper.create(readBuffer);
