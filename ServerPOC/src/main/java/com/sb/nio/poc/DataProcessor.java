@@ -37,10 +37,10 @@ public class DataProcessor implements IDataProcessor {
 		while (true) {
 			try {
 				IncomingData data = incoming.take();
-
-				DataProcessingTask t = new DataProcessingTask(data, listener);
+				
+				// TODO Redesign
+				ProtocolProcessor t = new HttpSimpleProcessor(data, listener);
 				executor.execute(t);
-
 			} catch (InterruptedException e) {
 				log.error(e.getMessage(), e);
 			}

@@ -1,0 +1,47 @@
+package com.sb.nio.poc;
+
+import java.nio.ByteBuffer;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public abstract class ProtocolProcessor implements Runnable {
+
+	private static final Logger log = LoggerFactory.getLogger(ProtocolProcessor.class);
+
+	private static BufferCache cache = BufferCache.getInstance();
+
+	private IncomingData data;
+	private MessageListener listener;
+
+	public ProtocolProcessor(IncomingData data, MessageListener listener) {
+		this.data = data;
+		this.listener = listener;
+	}
+
+	public void run() {
+		ByteBuffer readBuffer = data.getReadBuffer();
+
+		boolean keepAlive = readData(readBuffer);
+		
+		// add buffer to cache using socket Id
+		// check cached message if enough to proceed 
+		
+		// - return readbuffer to cache
+		cache.returnBuffer(readBuffer);
+
+		// if yes - proceed with response
+		// if no - wait for other chunk
+		// think what to do with leftover
+
+		ByteBuffer writeBuffer = cache.leaseBuffer();
+		Message message = prepareResponse(writeBuffer, data.getSocketId(), keepAlive);
+
+		listener.messageReady(message);
+	}
+
+	protected abstract Message prepareResponse(ByteBuffer writeBuffer, long socketId, boolean keepAlive);
+
+	protected abstract boolean readData(ByteBuffer readBuffer);
+}
+
