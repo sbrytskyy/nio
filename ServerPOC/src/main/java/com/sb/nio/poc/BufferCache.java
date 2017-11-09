@@ -8,6 +8,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
+// TODO Redesign cache for some kind of smart pointers - self containing info about what kind of cache, when to return to cache
 public class BufferCache {
 
 	private static final Logger log = LoggerFactory.getLogger(BufferCache.class);
