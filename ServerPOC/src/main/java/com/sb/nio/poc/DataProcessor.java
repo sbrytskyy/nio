@@ -1,5 +1,6 @@
 package com.sb.nio.poc;
 
+import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,7 +22,7 @@ public class DataProcessor implements IDataProcessor, DataProcessorCallback {
 
 	private static BufferCache cache = BufferCache.getInstance();
 	
-	private Map<Long, ByteBuffer> map = new HashMap<>();
+	private Map<Socket, ByteBuffer> map = new HashMap<>();
 
 	private MessageListener listener;
 
@@ -33,33 +34,37 @@ public class DataProcessor implements IDataProcessor, DataProcessorCallback {
 	@Override
 	public synchronized void processData(IncomingData data) {
 		
-		String s = new String(data.getReadBuffer().array());
-		data.getReadBuffer().flip();
+		ByteBuffer readBuffer = data.getReadBuffer();
+		Socket socket = data.getSocket();
+
+		String s = new String(readBuffer.array());
 		log.debug("[DataProcessor] data to process : <<< ---\n{}\n--- >>>", s);
 
-		
 		ByteBuffer buffer;
-		if (map.containsKey(data.getSocketId())) {
-			log.debug("Cached buffer for socket: {}", data.getSocketId());
-			buffer = map.get(data.getSocketId());
+		if (map.containsKey(socket)) {
+			log.trace("Cached buffer for socket: {}", socket);
+			buffer = map.get(socket);
 		} else {
 			buffer = cache.leaseLargeBuffer();
-			log.debug("New buffer for socket: {}", data.getSocketId());
+			log.trace("New buffer for socket: {}", socket);
 		}
 		// TODO Think about limit check, maybe resizable buffer
-		buffer.put(data.getReadBuffer());
-		cache.returnBuffer(data.getReadBuffer());
-		buffer.flip();
-		map.put(data.getSocketId(), buffer);
+		buffer.put(readBuffer);
+		cache.returnBuffer(readBuffer);
+		map.put(socket, buffer);
 		
 		
 		s = new String(buffer.array());
-		buffer.flip();
 		log.debug("[DataProcessor] total data to process : <<< ---\n{}\n--- >>>", s);
-		log.debug("Cached buffer size: {}", buffer.remaining());
+		log.trace("Cached buffer size: {}", buffer.remaining());
 		
 		// TODO check if setter is better
-		data = new IncomingData(buffer, data.getSocketId());
+		// TODO FIX Choose
+		// 1. Put unique data to queue, but it require data copying.
+		// 2. Check if data complete before put to queue, but it require additional method to check. NO
+		// 3. Put socket to queue and retrieve data from map - MAYBE Top priority to check
+
+		data = new IncomingData(buffer, socket);
 		try {
 			incoming.put(data);
 		} catch (InterruptedException e) {
@@ -86,8 +91,8 @@ public class DataProcessor implements IDataProcessor, DataProcessorCallback {
 	public void messageReady(Message message) {
 		// think what to do with leftover
 		
-		cache.returnLargeBuffer(map.get(message.getSocketId()));;
-		map.remove(message.getSocketId());
+		cache.returnLargeBuffer(map.get(message.getSocket()));;
+		map.remove(message.getSocket());
 
 		listener.messageReady(message);
 	}

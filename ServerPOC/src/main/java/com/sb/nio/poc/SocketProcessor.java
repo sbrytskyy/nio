@@ -2,6 +2,7 @@ package com.sb.nio.poc;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -13,7 +14,6 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,9 +22,7 @@ public class SocketProcessor implements Runnable, MessageListener {
 
 	private static final Logger log = LoggerFactory.getLogger(SocketProcessor.class);
 
-	private AtomicLong socketIdGenerator = new AtomicLong(1);
-
-	private Map<Long, SocketChannel> socketsMap = new HashMap<>();
+	private Map<Socket, SocketChannel> socketsMap = new HashMap<>();
 
 	private Queue<Message> outboundMessageQueue;
 
@@ -104,7 +102,7 @@ public class SocketProcessor implements Runnable, MessageListener {
 	private void processMessages() throws IOException {
 		while (!outboundMessageQueue.isEmpty()) {
 			Message message = outboundMessageQueue.poll();
-			SocketChannel channel = socketsMap.get(message.getSocketId());
+			SocketChannel channel = socketsMap.get(message.getSocket());
 			channel.register(selector, SelectionKey.OP_WRITE, message);
 		}
 	}
@@ -120,10 +118,12 @@ public class SocketProcessor implements Runnable, MessageListener {
 				log.debug("Socket has been closed by client: {}", channel);
 				result = false;
 			} else {
-				long socketId = socketIdGenerator.getAndIncrement();
-				socketsMap.put(socketId, channel);
+				Socket socket = channel.socket();
+				socketsMap.put(socket, channel);
+				
+				readBuffer.flip();
 
-				IncomingData data = new IncomingData(readBuffer, socketId);
+				IncomingData data = new IncomingData(readBuffer, socket);
 				protocolProcessor.processData(data);
 			}
 		} catch (IOException ex) {

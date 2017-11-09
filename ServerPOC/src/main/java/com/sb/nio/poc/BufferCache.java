@@ -39,7 +39,7 @@ public class BufferCache {
 		}
 		long l = leased.incrementAndGet();
 
-		log.debug("Leased buffers: {}", l);
+		log.trace("Leased buffers: {}", l);
 
 		buffer.clear();
 		return buffer;
@@ -50,7 +50,7 @@ public class BufferCache {
 		buffer.clear();
 		buffers.add(buffer);
 		
-		log.debug("Cached buffers: {}", buffers.size());
+		log.trace("Cached buffers: {}", buffers.size());
 	}
 
 	public ByteBuffer leaseLargeBuffer() {
@@ -60,7 +60,7 @@ public class BufferCache {
 		}
 		long l = leasedLarge.incrementAndGet();
 
-		log.debug("Leased large buffers: {}", l);
+		log.trace("Leased large buffers: {}", l);
 
 		buffer.clear();
 		return buffer;
@@ -71,6 +71,6 @@ public class BufferCache {
 		buffer.clear();
 		largeBuffers.add(buffer);
 		
-		log.debug("Cached large buffers: {}", largeBuffers.size());
+		log.trace("Cached large buffers: {}", largeBuffers.size());
 	}
 }

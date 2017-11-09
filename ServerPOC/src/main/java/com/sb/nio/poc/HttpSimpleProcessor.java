@@ -16,15 +16,16 @@ public class HttpSimpleProcessor extends ProtocolProcessor {
 
 	private static final Logger log = LoggerFactory.getLogger(HttpSimpleProcessor.class);
 
-	// TODO change boolean to int - number of used input bytes
 	protected boolean prepareResponse(final ByteBuffer readBuffer, ByteBuffer writeBuffer) {
 		String s = new String(readBuffer.array());
-		readBuffer.flip();
+
+		// TODO think how better check if http request is complete
+		if (!s.contains("\r\n\r\n")) {
+			log.warn("Not complete input data: {}", s);
+			return false;
+		}
 
 		log.debug("Incoming data: <<<\n{}>>>", s);
-		
-		// TODO think how better check if http request is complete
-		if (!s.contains("\r\n\r\n")) return false;
 
 		// - Preparing response
 		String httpResponse = "HTTP/1.1 200 OK\r\n" + "Content-Length: 38\r\n" + "Content-Type: text/html\r\n"
@@ -34,7 +35,10 @@ public class HttpSimpleProcessor extends ProtocolProcessor {
 
 		writeBuffer.clear();
 		writeBuffer.put(httpResponseBytes);
+		
 		writeBuffer.flip();
+		
+		// TODO setnew read buffer position - number of used input bytes
 		
 		return true;
 	}

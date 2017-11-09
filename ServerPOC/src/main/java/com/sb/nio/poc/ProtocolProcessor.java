@@ -21,13 +21,13 @@ public abstract class ProtocolProcessor implements Runnable {
 
 	public void run() {
 		ByteBuffer readBuffer = data.getReadBuffer();
-		log.debug("Buffer size: {}", readBuffer.remaining());
+		log.trace("Buffer size: {}", readBuffer.remaining());
 		boolean keepAlive = isKeepAlive(readBuffer);
 		
 		ByteBuffer writeBuffer = cache.leaseLargeBuffer();
 		boolean ready = prepareResponse(readBuffer, writeBuffer);
 		if (ready) {
-			Message message = new Message(writeBuffer, data.getSocketId(), keepAlive);
+			Message message = new Message(writeBuffer, data.getSocket(), keepAlive);
 			callback.messageReady(message);
 		}
 	}
