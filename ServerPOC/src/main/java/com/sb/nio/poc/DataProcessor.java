@@ -31,19 +31,32 @@ public class DataProcessor implements IDataProcessor, DataProcessorCallback {
 	}
 
 	@Override
-	public void processData(IncomingData data) {
+	public synchronized void processData(IncomingData data) {
+		
+		String s = new String(data.getReadBuffer().array());
+		data.getReadBuffer().flip();
+		log.debug("[DataProcessor] data to process : <<< ---\n{}\n--- >>>", s);
+
 		
 		ByteBuffer buffer;
 		if (map.containsKey(data.getSocketId())) {
+			log.debug("Cached buffer for socket: {}", data.getSocketId());
 			buffer = map.get(data.getSocketId());
 		} else {
 			buffer = cache.leaseLargeBuffer();
+			log.debug("New buffer for socket: {}", data.getSocketId());
 		}
 		// TODO Think about limit check, maybe resizable buffer
-		buffer.put(data.getReadBuffer().array());
+		buffer.put(data.getReadBuffer());
 		cache.returnBuffer(data.getReadBuffer());
 		buffer.flip();
 		map.put(data.getSocketId(), buffer);
+		
+		
+		s = new String(buffer.array());
+		buffer.flip();
+		log.debug("[DataProcessor] total data to process : <<< ---\n{}\n--- >>>", s);
+		log.debug("Cached buffer size: {}", buffer.remaining());
 		
 		// TODO check if setter is better
 		data = new IncomingData(buffer, data.getSocketId());

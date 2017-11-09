@@ -14,8 +14,8 @@ public class BufferCache {
 
 	private static final Logger log = LoggerFactory.getLogger(BufferCache.class);
 
-	private static final int DEFAULT_BUFFER_SIZE = 2048;
-	private static final int LARGE_BUFFER_SIZE = 8192;
+	private static final int DEFAULT_BUFFER_SIZE = 64;
+	private static final int LARGE_BUFFER_SIZE = 1024;
 
 	private Queue<ByteBuffer> buffers = new ConcurrentLinkedQueue<>();
 	private Queue<ByteBuffer> largeBuffers = new ConcurrentLinkedQueue<>();

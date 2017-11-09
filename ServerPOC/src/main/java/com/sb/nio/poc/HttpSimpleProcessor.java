@@ -19,6 +19,8 @@ public class HttpSimpleProcessor extends ProtocolProcessor {
 	// TODO change boolean to int - number of used input bytes
 	protected boolean prepareResponse(final ByteBuffer readBuffer, ByteBuffer writeBuffer) {
 		String s = new String(readBuffer.array());
+		readBuffer.flip();
+
 		log.debug("Incoming data: <<<\n{}>>>", s);
 		
 		// TODO think how better check if http request is complete
@@ -38,14 +40,16 @@ public class HttpSimpleProcessor extends ProtocolProcessor {
 	}
 
 	protected boolean isKeepAlive(ByteBuffer readBuffer) {
-		boolean keepAlive = false;
-		try {
-			HttpRequest request = HttpHelper.create(readBuffer);
-			keepAlive = HttpHelper.isKeepAlive(request);
-		} catch (IOException | HttpException e) {
-			log.error(e.getMessage(), e);
-		}
-		return keepAlive;
+//		boolean keepAlive = false;
+//		try {
+//			HttpRequest request = HttpHelper.create(readBuffer);
+//			keepAlive = HttpHelper.isKeepAlive(request);
+//		} catch (IOException | HttpException e) {
+//			log.error(e.getMessage(), e);
+//		}
+//		return keepAlive;
+		
+		return true;
 	}
 }
 

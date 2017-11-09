@@ -21,6 +21,7 @@ public abstract class ProtocolProcessor implements Runnable {
 
 	public void run() {
 		ByteBuffer readBuffer = data.getReadBuffer();
+		log.debug("Buffer size: {}", readBuffer.remaining());
 		boolean keepAlive = isKeepAlive(readBuffer);
 		
 		ByteBuffer writeBuffer = cache.leaseLargeBuffer();

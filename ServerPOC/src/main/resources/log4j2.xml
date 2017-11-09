@@ -2,7 +2,7 @@
 <configuration status="INFO">
 
   <properties>
-    <property name="app_log_level">$${env:LOG_LEVEL:-info}</property>
+    <property name="app_log_level">$${env:LOG_LEVEL:-debug}</property>
   </properties>
 
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="log4j2-appenders.xml"/>
