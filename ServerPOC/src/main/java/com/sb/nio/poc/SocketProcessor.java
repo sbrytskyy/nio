@@ -8,6 +8,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -23,6 +24,8 @@ public class SocketProcessor implements Runnable, MessageListener {
 	private static final Logger log = LoggerFactory.getLogger(SocketProcessor.class);
 
 	private Map<Socket, SocketChannel> socketsMap = new HashMap<>();
+	
+	private Map<Socket, ByteBuffer> socketCachedData = Collections.synchronizedMap(new HashMap<>());
 
 	private Queue<Message> outboundMessageQueue;
 
@@ -41,6 +44,7 @@ public class SocketProcessor implements Runnable, MessageListener {
 		this.outboundMessageQueue = new ConcurrentLinkedQueue<>();
 		
 		protocolProcessor.setMessageListener(this);
+		protocolProcessor.setSocketCachedData(socketCachedData);
 
 		serverSocketInit(port);
 	}
@@ -106,6 +110,8 @@ public class SocketProcessor implements Runnable, MessageListener {
 			channel.register(selector, SelectionKey.OP_WRITE, message);
 		}
 	}
+	
+	private static long cleanup = 0;
 
 	private void readFromSocket(SelectionKey key) throws IOException {
 		SocketChannel channel = (SocketChannel) key.channel();
@@ -114,6 +120,7 @@ public class SocketProcessor implements Runnable, MessageListener {
 		ByteBuffer readBuffer = cache.leaseBuffer();
 		try {
 			int bytesRead = channel.read(readBuffer);
+
 			if (bytesRead == -1) {
 				log.debug("Socket has been closed by client: {}", channel);
 				result = false;
@@ -123,8 +130,27 @@ public class SocketProcessor implements Runnable, MessageListener {
 				
 				readBuffer.flip();
 
-				IncomingData data = new IncomingData(readBuffer, socket);
-				protocolProcessor.processData(data);
+				ByteBuffer buffer;
+				String s = new String(readBuffer.array());
+				log.trace("[DataProcessor] data to process : <<< ---\n{}\n--- >>>", s);
+
+				if (socketCachedData.containsKey(socket)) {
+					log.trace("Cached buffer for socket: {}", socket);
+					buffer = socketCachedData.get(socket);
+				} else {
+					buffer = cache.leaseLargeBuffer();
+					log.trace("New buffer for socket: {}", socket);
+				}
+				// TODO Think about limit check, maybe resizable buffer
+				buffer.put(readBuffer);
+				cache.returnBuffer(readBuffer);
+				socketCachedData.put(socket, buffer);
+
+				s = new String(buffer.array());
+				log.trace("[DataProcessor] total data to process : <<< ---\n{}\n--- >>>", s);
+				log.trace("Cached buffer size: {}", buffer.remaining());
+
+				protocolProcessor.processData(socket);
 			}
 		} catch (IOException ex) {
 			log.error(ex.getMessage(), ex);
@@ -132,6 +158,15 @@ public class SocketProcessor implements Runnable, MessageListener {
 		}
 
 		if (!result) {
+			log.debug("Cleanup: " + cleanup++);
+			// TODO check
+			try {
+				cache.returnLargeBuffer(socketCachedData.get(channel.socket()));
+				socketCachedData.remove(channel.socket());
+			} catch (Exception ex) {
+				log.warn("Cleanup problem: " + ex.getMessage());
+			}
+
 			key.channel().close();
 			key.cancel();
 

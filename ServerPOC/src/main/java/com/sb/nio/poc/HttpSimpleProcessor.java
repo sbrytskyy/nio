@@ -2,6 +2,7 @@ package com.sb.nio.poc;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
@@ -10,50 +11,50 @@ import org.slf4j.LoggerFactory;
 
 public class HttpSimpleProcessor extends ProtocolProcessor {
 
+	private static final String HTTP_REQUEST_END = "\r\n\r\n";
+
 	public HttpSimpleProcessor(IncomingData data, DataProcessorCallback callback) {
 		super(data, callback);
 	}
 
 	private static final Logger log = LoggerFactory.getLogger(HttpSimpleProcessor.class);
 
-	protected boolean prepareResponse(final ByteBuffer readBuffer, ByteBuffer writeBuffer) {
-		String s = new String(readBuffer.array());
+	protected Response prepareResponse(final ByteBuffer readBuffer) {
+		Response response = new Response();
 
+		String s = new String(readBuffer.array());
+		
 		// TODO think how better check if http request is complete
-		if (!s.contains("\r\n\r\n")) {
-			log.warn("Not complete input data: {}", s);
-			return false;
+		if (!s.contains(HTTP_REQUEST_END)) {
+			log.trace("Not complete input data: {}", s);
+			return response;
 		}
 
 		log.debug("Incoming data: <<<\n{}>>>", s);
+		log.debug(readBuffer.toString());
+		log.debug(Arrays.toString(readBuffer.array()));
+
+		boolean keepAlive = false;
+		try {
+			HttpRequest request = HttpHelper.create(readBuffer);
+			keepAlive = HttpHelper.isKeepAlive(request);
+		} catch (IOException | HttpException e) {
+			log.error("Error! Request: <<<\n{}>>>", s);
+			log.error(e.getMessage(), e);
+		}
 
 		// - Preparing response
 		String httpResponse = "HTTP/1.1 200 OK\r\n" + "Content-Length: 38\r\n" + "Content-Type: text/html\r\n"
 				+ "\r\n" + "<html><body>Hello World!</body></html>";
 
-		byte[] httpResponseBytes = httpResponse.getBytes();
+		int index = s.indexOf(HTTP_REQUEST_END);
+		
+		response.readBytes = index + HTTP_REQUEST_END.length();
+		response.body = httpResponse.getBytes();
+		response.keepAlive = keepAlive;
+		response.ready = true;
 
-		writeBuffer.clear();
-		writeBuffer.put(httpResponseBytes);
-		
-		writeBuffer.flip();
-		
-		// TODO setnew read buffer position - number of used input bytes
-		
-		return true;
-	}
-
-	protected boolean isKeepAlive(ByteBuffer readBuffer) {
-//		boolean keepAlive = false;
-//		try {
-//			HttpRequest request = HttpHelper.create(readBuffer);
-//			keepAlive = HttpHelper.isKeepAlive(request);
-//		} catch (IOException | HttpException e) {
-//			log.error(e.getMessage(), e);
-//		}
-//		return keepAlive;
-		
-		return true;
+		return response;
 	}
 }
 
