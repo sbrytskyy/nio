@@ -37,14 +37,14 @@ public class DataProcessor implements IDataProcessor, DataProcessorCallback {
 		if (map.containsKey(data.getSocketId())) {
 			buffer = map.get(data.getSocketId());
 		} else {
-			// TODO Redesign with cache and resizable buffer
-			buffer = ByteBuffer.allocate(8192);
+			buffer = cache.leaseLargeBuffer();
 		}
-		// TODO Think about limit check
+		// TODO Think about limit check, maybe resizable buffer
 		buffer.put(data.getReadBuffer().array());
 		cache.returnBuffer(data.getReadBuffer());
-
 		buffer.flip();
+		map.put(data.getSocketId(), buffer);
+		
 		// TODO check if setter is better
 		data = new IncomingData(buffer, data.getSocketId());
 		try {
@@ -73,6 +73,7 @@ public class DataProcessor implements IDataProcessor, DataProcessorCallback {
 	public void messageReady(Message message) {
 		// think what to do with leftover
 		
+		cache.returnLargeBuffer(map.get(message.getSocketId()));;
 		map.remove(message.getSocketId());
 
 		listener.messageReady(message);

@@ -154,7 +154,7 @@ public class SocketProcessor implements Runnable, MessageListener {
 
 		log.debug("Outbound message to {}, written {} bytes.", channel, totalWritten);
 
-		cache.returnBuffer(byteBuffer);
+		cache.returnLargeBuffer(byteBuffer);
 		key.attach(null);
 
 		if (message.isKeepAlive()) {

@@ -23,7 +23,7 @@ public abstract class ProtocolProcessor implements Runnable {
 		ByteBuffer readBuffer = data.getReadBuffer();
 		boolean keepAlive = isKeepAlive(readBuffer);
 		
-		ByteBuffer writeBuffer = cache.leaseBuffer();
+		ByteBuffer writeBuffer = cache.leaseLargeBuffer();
 		boolean ready = prepareResponse(readBuffer, writeBuffer);
 		if (ready) {
 			Message message = new Message(writeBuffer, data.getSocketId(), keepAlive);
