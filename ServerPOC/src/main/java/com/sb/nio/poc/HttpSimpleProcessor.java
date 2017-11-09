@@ -10,15 +10,19 @@ import org.slf4j.LoggerFactory;
 
 public class HttpSimpleProcessor extends ProtocolProcessor {
 
-	public HttpSimpleProcessor(IncomingData data, MessageListener listener) {
-		super(data, listener);
+	public HttpSimpleProcessor(IncomingData data, DataProcessorCallback callback) {
+		super(data, callback);
 	}
 
 	private static final Logger log = LoggerFactory.getLogger(HttpSimpleProcessor.class);
 
+	// TODO change boolean to int - number of used input bytes
 	protected boolean prepareResponse(final ByteBuffer readBuffer, ByteBuffer writeBuffer) {
 		String s = new String(readBuffer.array());
 		log.debug("Incoming data: <<<\n{}>>>", s);
+		
+		// TODO think how better check if http request is complete
+		if (!s.contains("\r\n\r\n")) return false;
 
 		// - Preparing response
 		String httpResponse = "HTTP/1.1 200 OK\r\n" + "Content-Length: 38\r\n" + "Content-Type: text/html\r\n"
