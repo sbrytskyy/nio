@@ -111,8 +111,6 @@ public class SocketProcessor implements Runnable, MessageListener {
 		}
 	}
 
-	private static long cleanup = 0;
-
 	private void readFromSocket(SelectionKey key) throws IOException {
 		SocketChannel channel = (SocketChannel) key.channel();
 		boolean result = true;
@@ -151,14 +149,7 @@ public class SocketProcessor implements Runnable, MessageListener {
 		}
 
 		if (!result) {
-			log.debug("Cleanup: " + cleanup++);
-			// TODO check
-			try {
-				cache.returnLargeBuffer(socketCachedData.get(channel.socket()));
-				socketCachedData.remove(channel.socket());
-			} catch (Exception ex) {
-				log.warn("Cleanup problem: " + ex.getMessage());
-			}
+			cleanupCache(channel);
 
 			key.channel().close();
 			key.cancel();
@@ -188,9 +179,16 @@ public class SocketProcessor implements Runnable, MessageListener {
 		if (message.isKeepAlive()) {
 			key.interestOps(SelectionKey.OP_READ);
 		} else {
+			cleanupCache(channel);
+
 			key.channel().close();
 			key.cancel();
 		}
+	}
+
+	private void cleanupCache(SocketChannel channel) {
+		cache.returnLargeBuffer(socketCachedData.get(channel.socket()));
+		socketCachedData.remove(channel.socket());
 	}
 
 	@Override
