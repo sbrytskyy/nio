@@ -17,7 +17,8 @@ public class DataProcessor implements IDataProcessor, DataProcessorCallback {
 
 	private BlockingQueue<Socket> incoming = new LinkedBlockingQueue<>();
 
-	private ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
+	private ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors
+			.newFixedThreadPool(Math.max(Runtime.getRuntime().availableProcessors() - 2, 1));
 
 	private MessageListener listener;
 

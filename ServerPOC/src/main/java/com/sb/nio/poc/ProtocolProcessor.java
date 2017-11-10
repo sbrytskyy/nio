@@ -30,24 +30,24 @@ public abstract class ProtocolProcessor implements Runnable {
 		ByteBuffer readBuffer = data.getReadBuffer();
 		log.trace("Buffer size: {}", readBuffer.remaining());
 
-		Response response = prepareResponse(readBuffer);
-		if (response.ready) {
-			synchronized (readBuffer) {
+		synchronized (readBuffer) {
+			Response response = prepareResponse(readBuffer);
+			if (response.ready) {
 				// Shift not used data to the beginning
 				int oldPosition = readBuffer.position();
 				readBuffer.position(response.readBytes);
 				readBuffer.compact();
 				readBuffer.position(oldPosition - response.readBytes);
 				log.trace("Read cache buffer after compacting: {}", readBuffer);
+
+				ByteBuffer writeBuffer = cache.leaseLargeBuffer();
+				writeBuffer.clear();
+				writeBuffer.put(response.body);
+				writeBuffer.flip();
+
+				Message message = new Message(writeBuffer, data.getSocket(), response.keepAlive);
+				callback.messageReady(message);
 			}
-
-			ByteBuffer writeBuffer = cache.leaseLargeBuffer();
-			writeBuffer.clear();
-			writeBuffer.put(response.body);
-			writeBuffer.flip();
-
-			Message message = new Message(writeBuffer, data.getSocket(), response.keepAlive);
-			callback.messageReady(message);
 		}
 	}
 
