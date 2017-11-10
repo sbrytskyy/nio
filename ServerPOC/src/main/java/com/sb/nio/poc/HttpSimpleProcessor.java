@@ -13,10 +13,6 @@ public class HttpSimpleProcessor extends ProtocolProcessor {
 
 	private static final String HTTP_REQUEST_END = "\r\n\r\n";
 
-	public HttpSimpleProcessor(IncomingData data, DataProcessorCallback callback) {
-		super(data, callback);
-	}
-
 	private static final Logger log = LoggerFactory.getLogger(HttpSimpleProcessor.class);
 
 	protected Response prepareResponse(final ByteBuffer readBuffer) {

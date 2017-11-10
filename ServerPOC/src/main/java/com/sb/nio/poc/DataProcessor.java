@@ -11,7 +11,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class DataProcessor implements IDataProcessor, DataProcessorCallback {
+public class DataProcessor implements IDataProcessor {
 
 	private static final Logger log = LoggerFactory.getLogger(DataProcessor.class);
 
@@ -23,6 +23,12 @@ public class DataProcessor implements IDataProcessor, DataProcessorCallback {
 	private MessageListener listener;
 
 	private Map<Socket, ByteBuffer> socketCachedData;
+
+	private Protocol protocol;
+
+	public DataProcessor(Protocol protocol) {
+		this.protocol = protocol;
+	}
 
 	@Override
 	public void setSocketCachedData(Map<Socket, ByteBuffer> socketCachedData) {
@@ -52,17 +58,12 @@ public class DataProcessor implements IDataProcessor, DataProcessorCallback {
 				ByteBuffer buffer = socketCachedData.get(socket);
 				IncomingData data = new IncomingData(buffer, socket);
 
-				// TODO Redesign using Factory pattern
-				ProtocolProcessor t = new HttpSimpleProcessor(data, DataProcessor.this);
+				ProtocolProcessor t = ProtocolProcessorFactory.getProtocolProcessor(protocol);
+				t.setData(data, listener);
 				executor.execute(t);
 			} catch (InterruptedException e) {
 				log.error(e.getMessage(), e);
 			}
 		}
-	}
-
-	@Override
-	public synchronized void messageReady(Message message) {
-		listener.messageReady(message);
 	}
 }

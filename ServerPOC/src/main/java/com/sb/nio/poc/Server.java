@@ -11,15 +11,18 @@ public class Server {
 
 	private int port;
 	private IDataProcessor protocolProcessor;
+
+	private Protocol protocol;
 	
-	public Server(int port) {
+	public Server(int port, Protocol protocol) {
 		this.port = port;
+		this.protocol = protocol;
 	}
 
 	public void start() throws IOException {
 		log.info("Server configured with port: {}", port);
 
-		protocolProcessor = new DataProcessor();
+		protocolProcessor = new DataProcessor(protocol);
 		Thread pp = new Thread(protocolProcessor);
 		pp.setName("Protocol Processor");
 		pp.start();

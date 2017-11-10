@@ -12,11 +12,14 @@ public abstract class ProtocolProcessor implements Runnable {
 	private static BufferCache cache = BufferCache.getInstance();
 
 	private IncomingData data;
-	private DataProcessorCallback callback;
+	private MessageListener listener;
 
-	public ProtocolProcessor(IncomingData data, DataProcessorCallback callback) {
+	public ProtocolProcessor() {
+	}
+
+	public void setData(IncomingData data, MessageListener listener) {
 		this.data = data;
-		this.callback = callback;
+		this.listener = listener;
 	}
 
 	protected class Response {
@@ -27,6 +30,8 @@ public abstract class ProtocolProcessor implements Runnable {
 	}
 
 	public void run() {
+		if (data == null || listener == null) return; 
+		
 		ByteBuffer readBuffer = data.getReadBuffer();
 		if (readBuffer != null) {
 			log.trace("Buffer size: {}", readBuffer.remaining());
@@ -47,7 +52,7 @@ public abstract class ProtocolProcessor implements Runnable {
 					writeBuffer.flip();
 
 					Message message = new Message(writeBuffer, data.getSocket(), response.keepAlive);
-					callback.messageReady(message);
+					listener.messageReady(message);
 				}
 			}
 		}
