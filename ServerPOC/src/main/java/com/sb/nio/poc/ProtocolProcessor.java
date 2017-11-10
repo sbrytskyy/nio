@@ -18,7 +18,7 @@ public abstract class ProtocolProcessor implements Runnable {
 		this.data = data;
 		this.callback = callback;
 	}
-	
+
 	protected class Response {
 		boolean ready;
 		boolean keepAlive;
@@ -29,16 +29,18 @@ public abstract class ProtocolProcessor implements Runnable {
 	public void run() {
 		ByteBuffer readBuffer = data.getReadBuffer();
 		log.trace("Buffer size: {}", readBuffer.remaining());
-		
+
 		Response response = prepareResponse(readBuffer);
 		if (response.ready) {
-			// Shift not used data to the beginning
-			int oldPosition = readBuffer.position();
-			readBuffer.position(response.readBytes);
-			readBuffer.compact();
-			readBuffer.position(oldPosition - response.readBytes);
-			log.trace("Read cache buffer after compacting: {}", readBuffer);
-			
+			synchronized (readBuffer) {
+				// Shift not used data to the beginning
+				int oldPosition = readBuffer.position();
+				readBuffer.position(response.readBytes);
+				readBuffer.compact();
+				readBuffer.position(oldPosition - response.readBytes);
+				log.trace("Read cache buffer after compacting: {}", readBuffer);
+			}
+
 			ByteBuffer writeBuffer = cache.leaseLargeBuffer();
 			writeBuffer.clear();
 			writeBuffer.put(response.body);
@@ -51,4 +53,3 @@ public abstract class ProtocolProcessor implements Runnable {
 
 	protected abstract Response prepareResponse(final ByteBuffer readBuffer);
 }
-

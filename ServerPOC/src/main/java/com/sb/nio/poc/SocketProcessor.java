@@ -24,7 +24,7 @@ public class SocketProcessor implements Runnable, MessageListener {
 	private static final Logger log = LoggerFactory.getLogger(SocketProcessor.class);
 
 	private Map<Socket, SocketChannel> socketsMap = new HashMap<>();
-	
+
 	private Map<Socket, ByteBuffer> socketCachedData = Collections.synchronizedMap(new HashMap<>());
 
 	private Queue<Message> outboundMessageQueue;
@@ -42,7 +42,7 @@ public class SocketProcessor implements Runnable, MessageListener {
 
 		this.selector = Selector.open();
 		this.outboundMessageQueue = new ConcurrentLinkedQueue<>();
-		
+
 		protocolProcessor.setMessageListener(this);
 		protocolProcessor.setSocketCachedData(socketCachedData);
 
@@ -110,7 +110,7 @@ public class SocketProcessor implements Runnable, MessageListener {
 			channel.register(selector, SelectionKey.OP_WRITE, message);
 		}
 	}
-	
+
 	private static long cleanup = 0;
 
 	private void readFromSocket(SelectionKey key) throws IOException {
@@ -127,28 +127,21 @@ public class SocketProcessor implements Runnable, MessageListener {
 			} else {
 				Socket socket = channel.socket();
 				socketsMap.put(socket, channel);
-				
+
 				readBuffer.flip();
 
 				ByteBuffer buffer;
-				String s = new String(readBuffer.array());
-				log.trace("[DataProcessor] data to process : <<< ---\n{}\n--- >>>", s);
-
 				if (socketCachedData.containsKey(socket)) {
-					log.trace("Cached buffer for socket: {}", socket);
 					buffer = socketCachedData.get(socket);
 				} else {
 					buffer = cache.leaseLargeBuffer();
-					log.trace("New buffer for socket: {}", socket);
 				}
-				// TODO Think about limit check, maybe resizable buffer
-				buffer.put(readBuffer);
+				synchronized (buffer) {
+					// TODO Think about limit check, maybe resizable buffer
+					buffer.put(readBuffer);
+					socketCachedData.put(socket, buffer);
+				}
 				cache.returnBuffer(readBuffer);
-				socketCachedData.put(socket, buffer);
-
-				s = new String(buffer.array());
-				log.trace("[DataProcessor] total data to process : <<< ---\n{}\n--- >>>", s);
-				log.trace("Cached buffer size: {}", buffer.remaining());
 
 				protocolProcessor.processData(socket);
 			}

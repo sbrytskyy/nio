@@ -22,7 +22,7 @@ public class HttpSimpleProcessor extends ProtocolProcessor {
 	protected Response prepareResponse(final ByteBuffer readBuffer) {
 		Response response = new Response();
 
-		String s = new String(readBuffer.array());
+		String s = new String(readBuffer.array(), 0, readBuffer.position());
 		
 		// TODO think how better check if http request is complete
 		if (!s.contains(HTTP_REQUEST_END)) {
@@ -31,8 +31,8 @@ public class HttpSimpleProcessor extends ProtocolProcessor {
 		}
 
 		log.debug("Incoming data: <<<\n{}>>>", s);
-		log.debug(readBuffer.toString());
-		log.debug(Arrays.toString(readBuffer.array()));
+//		log.debug(readBuffer.toString());
+//		log.debug(Arrays.toString(readBuffer.array()));
 
 		boolean keepAlive = false;
 		try {
