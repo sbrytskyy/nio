@@ -4,9 +4,9 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,8 +17,7 @@ public class DataProcessor implements IDataProcessor, DataProcessorCallback {
 
 	private BlockingQueue<Socket> incoming = new LinkedBlockingQueue<>();
 
-	private ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors
-			.newFixedThreadPool(Math.max(Runtime.getRuntime().availableProcessors() - 2, 1));
+	private ExecutorService executor = Executors.newSingleThreadExecutor();
 
 	private MessageListener listener;
 
