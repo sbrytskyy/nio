@@ -2,18 +2,19 @@ package com.sb.nio.poc;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,9 +23,9 @@ public class SocketProcessor implements Runnable, MessageListener {
 
 	private static final Logger log = LoggerFactory.getLogger(SocketProcessor.class);
 
-	private AtomicLong socketIdGenerator = new AtomicLong(1);
+	private Map<Socket, SocketChannel> socketsMap = new HashMap<>();
 
-	private Map<Long, SocketChannel> socketsMap = new HashMap<>();
+	private Map<Socket, ByteBuffer> socketCachedData = Collections.synchronizedMap(new HashMap<>());
 
 	private Queue<Message> outboundMessageQueue;
 
@@ -41,8 +42,9 @@ public class SocketProcessor implements Runnable, MessageListener {
 
 		this.selector = Selector.open();
 		this.outboundMessageQueue = new ConcurrentLinkedQueue<>();
-		
+
 		protocolProcessor.setMessageListener(this);
+		protocolProcessor.setSocketCachedData(socketCachedData);
 
 		serverSocketInit(port);
 	}
@@ -104,7 +106,7 @@ public class SocketProcessor implements Runnable, MessageListener {
 	private void processMessages() throws IOException {
 		while (!outboundMessageQueue.isEmpty()) {
 			Message message = outboundMessageQueue.poll();
-			SocketChannel channel = socketsMap.get(message.getSocketId());
+			SocketChannel channel = socketsMap.get(message.getSocket());
 			channel.register(selector, SelectionKey.OP_WRITE, message);
 		}
 	}
@@ -116,15 +118,30 @@ public class SocketProcessor implements Runnable, MessageListener {
 		ByteBuffer readBuffer = cache.leaseBuffer();
 		try {
 			int bytesRead = channel.read(readBuffer);
+
 			if (bytesRead == -1) {
 				log.debug("Socket has been closed by client: {}", channel);
 				result = false;
 			} else {
-				long socketId = socketIdGenerator.getAndIncrement();
-				socketsMap.put(socketId, channel);
+				Socket socket = channel.socket();
+				socketsMap.put(socket, channel);
 
-				IncomingData data = new IncomingData(readBuffer, socketId);
-				protocolProcessor.processData(data);
+				readBuffer.flip();
+
+				ByteBuffer buffer;
+				if (socketCachedData.containsKey(socket)) {
+					buffer = socketCachedData.get(socket);
+				} else {
+					buffer = cache.leaseLargeBuffer();
+				}
+				synchronized (buffer) {
+					// TODO Think about limit check, maybe resizable buffer
+					buffer.put(readBuffer);
+					socketCachedData.put(socket, buffer);
+				}
+				cache.returnBuffer(readBuffer);
+
+				protocolProcessor.processData(socket);
 			}
 		} catch (IOException ex) {
 			log.error(ex.getMessage(), ex);
@@ -132,6 +149,8 @@ public class SocketProcessor implements Runnable, MessageListener {
 		}
 
 		if (!result) {
+			cleanupCache(channel);
+
 			key.channel().close();
 			key.cancel();
 
@@ -160,9 +179,16 @@ public class SocketProcessor implements Runnable, MessageListener {
 		if (message.isKeepAlive()) {
 			key.interestOps(SelectionKey.OP_READ);
 		} else {
+			cleanupCache(channel);
+
 			key.channel().close();
 			key.cancel();
 		}
+	}
+
+	private void cleanupCache(SocketChannel channel) {
+		cache.returnLargeBuffer(socketCachedData.get(channel.socket()));
+		socketCachedData.remove(channel.socket());
 	}
 
 	@Override

@@ -1,16 +1,17 @@
 package com.sb.nio.poc;
 
+import java.net.Socket;
 import java.nio.ByteBuffer;
 
 public class Message {
 
 	private ByteBuffer body;
-	private long socketId;
+	private Socket socket;
 	private boolean keepAlive;
 
-	public Message(ByteBuffer buffer, long socketId, boolean keepAlive) {
+	public Message(ByteBuffer buffer, Socket socket, boolean keepAlive) {
 		this.body = buffer;
-		this.socketId = socketId;
+		this.socket = socket;
 		this.keepAlive = keepAlive;
 	}
 
@@ -22,7 +23,7 @@ public class Message {
 		return body;
 	}
 
-	public long getSocketId() {
-		return socketId;
+	public Socket getSocket() {
+		return socket;
 	}
 }

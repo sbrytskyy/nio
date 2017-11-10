@@ -3,12 +3,12 @@
 <Appenders>
   <Console name="Console" target="SYSTEM_OUT">
     <PatternLayout
-        pattern="%C:%L|%d{yyyy/MM/dd HH:mm:ss.SSS}|%m%n"/>
+        pattern="*|%-5p|%d{yyyy/MM/dd HH:mm:ss.SSS}|%C:%L|%m%n"/>
   </Console>
 
   <Console name="ConsoleErr" target="SYSTEM_ERR">
     <PatternLayout
-        pattern="%C:%L|%d{yyyy/MM/dd HH:mm:ss.SSS}|%m%n"/>
+        pattern="*|%-5p|%d{yyyy/MM/dd HH:mm:ss.SSS}|%C:%L|%m%n"/>
   </Console>
 
 </Appenders>

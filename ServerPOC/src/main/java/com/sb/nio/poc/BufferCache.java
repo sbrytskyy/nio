@@ -15,7 +15,7 @@ public class BufferCache {
 	private static final Logger log = LoggerFactory.getLogger(BufferCache.class);
 
 	private static final int DEFAULT_BUFFER_SIZE = 2048;
-	private static final int LARGE_BUFFER_SIZE = 8192;
+	private static final int LARGE_BUFFER_SIZE = 8192 * 2;
 
 	private Queue<ByteBuffer> buffers = new ConcurrentLinkedQueue<>();
 	private Queue<ByteBuffer> largeBuffers = new ConcurrentLinkedQueue<>();
@@ -34,43 +34,45 @@ public class BufferCache {
 
 	public ByteBuffer leaseBuffer() {
 		ByteBuffer buffer = buffers.poll();
+		long l = leased.incrementAndGet();
+		
 		if (buffer == null) {
 			buffer = ByteBuffer.allocate(DEFAULT_BUFFER_SIZE);
 		}
-		long l = leased.incrementAndGet();
 
-		log.debug("Leased buffers: {}", l);
+		log.debug("Leased buffers: {}:{}", l, buffers.size());
 
 		buffer.clear();
 		return buffer;
 	}
 
 	public void returnBuffer(ByteBuffer buffer) {
-		leased.decrementAndGet();
+		long l = leased.decrementAndGet();
 		buffer.clear();
 		buffers.add(buffer);
 		
-		log.debug("Cached buffers: {}", buffers.size());
+		log.debug("Cached buffers: {}:{}", l, buffers.size());
 	}
 
 	public ByteBuffer leaseLargeBuffer() {
 		ByteBuffer buffer = largeBuffers.poll();
+		long l = leasedLarge.incrementAndGet();
+
 		if (buffer == null) {
 			buffer = ByteBuffer.allocate(LARGE_BUFFER_SIZE);
 		}
-		long l = leasedLarge.incrementAndGet();
 
-		log.debug("Leased large buffers: {}", l);
+		log.debug("Leased large buffers: {}:{}", l, largeBuffers.size());
 
 		buffer.clear();
 		return buffer;
 	}
 
 	public void returnLargeBuffer(ByteBuffer buffer) {
-		leasedLarge.decrementAndGet();
+		long l = leasedLarge.decrementAndGet();
 		buffer.clear();
 		largeBuffers.add(buffer);
 		
-		log.debug("Cached large buffers: {}", largeBuffers.size());
+		log.debug("Cached large buffers: {}:{}", l, largeBuffers.size());
 	}
 }
