@@ -114,7 +114,7 @@ public class SocketProcessor implements Runnable, MessageListener {
 	private void readFromSocket(SelectionKey key) throws IOException {
 		SocketChannel channel = (SocketChannel) key.channel();
 		boolean result = true;
-
+		
 		ByteBuffer readBuffer = cache.leaseBuffer();
 		try {
 			int bytesRead = channel.read(readBuffer);

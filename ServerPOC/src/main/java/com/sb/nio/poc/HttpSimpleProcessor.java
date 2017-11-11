@@ -2,7 +2,6 @@ package com.sb.nio.poc;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
@@ -27,8 +26,7 @@ public class HttpSimpleProcessor extends ProtocolProcessor {
 		}
 
 		log.debug("Incoming data: <<<\n{}>>>", s);
-//		log.debug(readBuffer.toString());
-//		log.debug(Arrays.toString(readBuffer.array()));
+		log.debug(readBuffer.toString());
 
 		boolean keepAlive = false;
 		try {

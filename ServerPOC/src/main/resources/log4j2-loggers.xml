@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <loggers>
 
+	<Logger name="com.sb.nio.poc.BufferCache" level="debug">
+      <AppenderRef ref="Console"/>
+    </Logger>
+
 	<Root level="${app_log_level}">
 		<AppenderRef ref="Console" />
 	</Root>
