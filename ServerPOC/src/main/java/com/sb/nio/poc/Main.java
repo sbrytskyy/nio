@@ -12,7 +12,7 @@ public class Main {
 	private static final int DEFAULT_SERVER_PORT = 8080;
 
 	public void startServer() {
-		Server s = new Server(DEFAULT_SERVER_PORT, Protocol.ECHO);
+		Server s = new Server(DEFAULT_SERVER_PORT, Protocol.HTTP);
 		try {
 			s.start();
 		} catch (IOException e) {

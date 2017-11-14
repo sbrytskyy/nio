@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <loggers>
 
-	<Logger name="com.sb.nio.poc.BufferCache" level="debug">
+	<Logger name="com.sb.nio.poc.BufferCache" level="info">
       <AppenderRef ref="Console"/>
     </Logger>
 
