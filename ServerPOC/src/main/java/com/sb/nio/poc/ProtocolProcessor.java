@@ -46,7 +46,7 @@ public abstract class ProtocolProcessor implements Runnable {
 					readBuffer.position(oldPosition - response.readBytes);
 					log.trace("Read cache buffer after compacting: {}", readBuffer);
 
-					ByteBuffer writeBuffer = cache.leaseLargeBuffer();
+					ByteBuffer writeBuffer = cache.leaseLargeWriteBuffer();
 					writeBuffer.clear();
 					writeBuffer.put(response.body);
 					writeBuffer.flip();
