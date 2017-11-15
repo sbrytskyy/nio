@@ -17,7 +17,19 @@ public class HttpSimpleProcessor extends ProtocolProcessor {
 	protected Response prepareResponse(final ByteBuffer readBuffer) {
 		Response response = new Response();
 
-		String s = new String(readBuffer.array(), 0, readBuffer.position());
+		byte[] ba = new byte[readBuffer.position()];
+		
+		String s;
+		if (readBuffer.isDirect()) {
+			int pos = readBuffer.position();
+			readBuffer.position(0);
+			readBuffer.get(ba);
+			readBuffer.position(pos);
+			
+			s = new String(ba);
+		} else {
+			s = new String(readBuffer.array(), 0, readBuffer.position());
+		}
 		
 		// TODO think how better check if http request is complete
 		if (!s.contains(HTTP_REQUEST_END)) {
@@ -30,7 +42,7 @@ public class HttpSimpleProcessor extends ProtocolProcessor {
 
 		boolean keepAlive = false;
 		try {
-			HttpRequest request = HttpHelper.create(readBuffer);
+			HttpRequest request = HttpHelper.create(ba);
 			keepAlive = HttpHelper.isKeepAlive(request);
 		} catch (IOException | HttpException e) {
 			log.error("Error! Request: <<<\n{}>>>", s);

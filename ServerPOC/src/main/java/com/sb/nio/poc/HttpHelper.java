@@ -28,10 +28,10 @@ public class HttpHelper {
 
 	private static final Logger log = LoggerFactory.getLogger(HttpHelper.class);
 
-	public static HttpRequest create(final ByteBuffer buffer) throws IOException, HttpException {
+	public static HttpRequest create(final byte[] array) throws IOException, HttpException {
 		SessionInputBuffer inputBuffer = new AbstractSessionInputBuffer() {
 			{
-				init(new ByteArrayInputStream(buffer.array()), 10, new BasicHttpParams());
+				init(new ByteArrayInputStream(array), 10, new BasicHttpParams());
 			}
 
 			@Override

@@ -37,7 +37,7 @@ public class BufferCache {
 		long l = leased.incrementAndGet();
 		
 		if (buffer == null) {
-			buffer = ByteBuffer.allocate(DEFAULT_BUFFER_SIZE);
+			buffer = ByteBuffer.allocateDirect(DEFAULT_BUFFER_SIZE);
 		}
 
 		log.debug("Leased buffers: {}:{}", l, buffers.size());
@@ -59,7 +59,7 @@ public class BufferCache {
 		long l = leasedLarge.incrementAndGet();
 
 		if (buffer == null) {
-			buffer = ByteBuffer.allocate(LARGE_BUFFER_SIZE);
+			buffer = ByteBuffer.allocateDirect(LARGE_BUFFER_SIZE);
 		}
 
 		log.debug("Leased large buffers: {}:{}", l, largeBuffers.size());
