@@ -87,6 +87,7 @@ public class SocketProcessor implements Runnable, MessageListener {
 
 			} catch (Exception e) {
 				log.error(e.getMessage(), e);
+				break;
 			}
 		}
 	}
@@ -132,7 +133,7 @@ public class SocketProcessor implements Runnable, MessageListener {
 				if (socketCachedData.containsKey(socket)) {
 					buffer = socketCachedData.get(socket);
 				} else {
-					buffer = cache.leaseLargeBuffer();
+					buffer = cache.leaseLargeReadBuffer();
 				}
 				synchronized (buffer) {
 					// TODO Think about limit check, maybe resizable buffer
@@ -173,7 +174,7 @@ public class SocketProcessor implements Runnable, MessageListener {
 
 		log.debug("Outbound message to {}, written {} bytes.", channel, totalWritten);
 
-		cache.returnLargeBuffer(byteBuffer);
+		cache.returnLargeWriteBuffer(byteBuffer);
 		key.attach(null);
 
 		if (message.isKeepAlive()) {
@@ -187,7 +188,7 @@ public class SocketProcessor implements Runnable, MessageListener {
 	}
 
 	private void cleanupCache(SocketChannel channel) {
-		cache.returnLargeBuffer(socketCachedData.get(channel.socket()));
+		cache.returnLargeReadBuffer(socketCachedData.get(channel.socket()));
 		socketCachedData.remove(channel.socket());
 	}
 
