@@ -6,3 +6,9 @@ target/
 RemoteSystemsTempFiles
 java-nio-server
 nio_tutorial
+*.log
+*.generated
+marathon.json
+marathon_app.json
+marathon_base.json
+marathon_rlbk.json
