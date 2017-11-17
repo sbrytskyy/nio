@@ -47,6 +47,9 @@ public class BufferCache {
 	}
 
 	public void returnBuffer(ByteBuffer buffer) {
+		if (buffer == null)
+			return;
+
 		long l = leased.decrementAndGet();
 		buffer.clear();
 		buffers.add(buffer);
@@ -69,6 +72,9 @@ public class BufferCache {
 	}
 
 	public void returnLargeBuffer(ByteBuffer buffer) {
+		if (buffer == null)
+			return;
+
 		long l = leasedLarge.decrementAndGet();
 		buffer.clear();
 		largeBuffers.add(buffer);
