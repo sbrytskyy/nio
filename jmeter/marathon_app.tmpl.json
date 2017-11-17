@@ -1,0 +1,7 @@
+{
+  "mem": 4096,
+  "env": {
+    "JAVA_OPTS": "-Xms1024m -Xmx4096m -XX:MaxMetaspaceSize=512m -XX:ThreadStackSize=1m"
+  },
+  "uris": ["@URIS@"]
+}

@@ -1,0 +1,28 @@
+{
+  "mem": 4096,
+  "container": {
+    "docker": {
+      "portMappings": [{
+        "containerPort": 8080,
+        "hostPort": 0,
+        "servicePort": 0,
+        "protocol": "tcp"
+      }]
+    }
+  },
+  "env": {
+    "JAVA_OPTS": "-Xms1024m -Xmx4096m -XX:MaxMetaspaceSize=512m -XX:ThreadStackSize=1m"
+  },
+  "healthChecks": [
+    {
+      "protocol": "TCP",
+      "portIndex": 0,
+      "gracePeriodSeconds": 300,
+      "intervalSeconds": 60,
+      "timeoutSeconds": 20,
+      "maxConsecutiveFailures": 3,
+      "ignoreHttp1xx": false
+    }
+  ],
+  "uris": ["@URIS@"]
+}
