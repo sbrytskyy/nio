@@ -20,7 +20,7 @@ public class Server {
 
 	private static final Logger log = LoggerFactory.getLogger(Server.class);
 
-	private HelloServerHandler helloServerHandler = new HelloServerHandler();
+//	private HelloServerHandler helloServerHandler = new HelloServerHandler();
 	private HttpHandler httpHandler = new HttpHandler();
 	private int port;
 
@@ -39,10 +39,10 @@ public class Server {
 
 			ChannelInitializer<SocketChannel> childHandler = new ChannelInitializer<SocketChannel>() {
 				protected void initChannel(SocketChannel socketChannel) throws Exception {
-					// socketChannel.pipeline().addLast(helloServerHandler);
 					socketChannel.pipeline().addLast("codec", new HttpServerCodec());
 					socketChannel.pipeline().addLast("aggregator", new HttpObjectAggregator(512 * 1024));
 					socketChannel.pipeline().addLast("request", httpHandler);
+//					socketChannel.pipeline().addLast("echo", helloServerHandler);
 				}
 			};
 			serverBootstrap.childHandler(childHandler);
