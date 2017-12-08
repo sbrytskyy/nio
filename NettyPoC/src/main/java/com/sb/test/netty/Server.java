@@ -1,6 +1,8 @@
 package com.sb.test.netty;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,12 +26,15 @@ public class Server {
 	private HttpHandler httpHandler = new HttpHandler();
 	private int port;
 
+	private final int nThreads = Math.max(Runtime.getRuntime().availableProcessors() - 2, 1);
+	private ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(nThreads);
+
 	public Server(int port) {
 		this.port = port;
 	}
 
 	public void start() throws InterruptedException {
-		EventLoopGroup group = new NioEventLoopGroup();
+		EventLoopGroup group = new NioEventLoopGroup(nThreads, executor);
 
 		try {
 			ServerBootstrap serverBootstrap = new ServerBootstrap();
